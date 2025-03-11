@@ -74,6 +74,9 @@ def get_gpu_info() -> Dict:
             
             if stats.get("status") == "ok":
                 data = stats.get("data", {})
+                temps = data.get("temps", {})
+                temperature = temps.get("edge", {}).get("current") or temps.get("GPU", {}).get("current", 0.0)
+                
                 gpu_info.append({
                     "model": device.get("name", "Unknown"),
                     "total_memory": data.get("vram", {}).get("total", 0),
@@ -81,7 +84,7 @@ def get_gpu_info() -> Dict:
                     "free_memory": data.get("vram", {}).get("total", 0) - data.get("vram", {}).get("used", 0),
                     "percent_memory": (data.get("vram", {}).get("used", 0) / data.get("vram", {}).get("total", 1)) * 100,
                     "utilization": data.get("busy_percent", 0),
-                    "temperature": data.get("temps", {}).get("edge", {}).get("current", 0.0),
+                    "temperature": temperature,
                     "power_draw": data.get("power", {}).get("current", 0.0)
                 })
     
@@ -106,7 +109,7 @@ def get_system_info() -> Dict:
     # CPU Temperature
     try:
         with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
-            cpu_temp = str(int(f.read().strip()) / 1000.0)
+            cpu_temp = int(f.read().strip()) / 1000.0
     except (FileNotFoundError, ValueError):
         cpu_temp = "Not available"
 
@@ -123,18 +126,18 @@ def get_system_info() -> Dict:
     # Memory Information
     mem = psutil.virtual_memory()
     memory_info = {
-        "total": int(mem.total / 1048576),
-        "available": int(mem.available / 1048576),
-        "used": int(mem.used / 1048576),
+        "total": mem.total,
+        "available": mem.available,
+        "used": mem.used,
         "percent": mem.percent
     }
 
     # Storage Information
     disk = psutil.disk_usage('/')
     storage_info = {
-        "total": int(disk.total / 1048576),
-        "used": int(disk.used / 1048576),
-        "free": int(disk.free / 1048576),
+        "total": disk.total,
+        "used": disk.used,
+        "free": disk.free,
         "percent": disk.percent
     }
 
