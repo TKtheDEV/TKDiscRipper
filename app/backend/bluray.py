@@ -1,51 +1,59 @@
 import os
 import logging
-from utils.makemkv_int import MakeMKVHelper
-from utils.handbrake_int import HandBrakeHelper
+import subprocess
+from backend.utils.makemkv_int import MakeMKVHelper
+from backend.utils.handbrake_int import HandBrakeHelper
+from backend.job_tracker import JobTracker
+from backend.utils.config_manager import get_config
 
 class BlurayRipper:
-    def __init__(self, drive: str, output_dir: str, skip_rip: bool = False):
+    def __init__(self, drive: str, job_id: str):
         self.drive = drive
-        self.output_dir = output_dir
+        self.job_id = job_id
         self.makemkv = MakeMKVHelper()
         self.handbrake = HandBrakeHelper()
-        self.skip_rip = skip_rip  # Flag to skip ripping
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        self.tracker = JobTracker()
 
-    def rip_disc(self):
-        """Runs the full Blu-ray ripping process, or skips ripping if flag is set."""
-        logging.info(f"Starting Blu-ray ripping process for drive: {self.drive}")
-        
-        # Step 1: Skip ripping if the flag is set
-        if self.skip_rip:
-            logging.info("Skipping Blu-ray ripping. Using files already in the output directory.")
-            mkv_output_paths = self.get_mkv_files(self.output_dir)
-        else:
-            # Rip with MakeMKV
-            mkv_output_paths = self.makemkv.rip_disc(self.drive, self.output_dir)
-            if not mkv_output_paths:
-                logging.error("MakeMKV failed to rip the Blu-ray.")
-                return False
+        # Get output directory from config
+        config = get_config()
+        self.output_dir = config.get("paths", "output_dir", fallback="output")
 
-            # After ripping, scan the output directory for .mkv files
-            logging.info(f"Ripped Blu-ray successfully: {mkv_output_paths}")
-            mkv_output_paths = self.get_mkv_files(self.output_dir)
+    def rip_bluray(self):
+        """Runs the full Blu-ray ripping process with status updates."""
 
-        # Step 2: If no .mkv files are found, log an error
+        # Step 1: Mark job as "starting"
+        self.tracker._update_job(self.job_id, "🚀 Job started: Preparing for ripping...", progress=0, status="starting")
+
+        # Step 2: Rip with MakeMKV
+        self.tracker._update_job(self.job_id, "📀 Ripping Blu-ray with MakeMKV...", progress=5, status="ripping")
+        mkv_output_paths = self.makemkv.rip_disc(self.drive, self.output_dir)
         if not mkv_output_paths:
-            logging.error("No MKV files found in the output directory.")
+            self.tracker._update_job(self.job_id, "❌ MakeMKV failed.", progress=5, status="failed")
             return False
 
-        logging.info(f"Passing the following files to HandBrake: {mkv_output_paths}")
-        
-        # Step 3: Transcode with HandBrake
+        self.tracker._update_job(self.job_id, f"✅ MakeMKV completed: {mkv_output_paths}", progress=50)
+
+        # Step 3: Eject the disc
+        self.eject_disc()
+
+        # Step 4: Transcode with HandBrake
+        self.tracker._update_job(self.job_id, "🎥 Transcoding video with HandBrake...", progress=55, status="transcoding")
         final_output_paths = self.handbrake.transcode(mkv_output_paths, self.output_dir)
         if not final_output_paths:
-            logging.error("HandBrake failed to transcode the Blu-ray.")
+            self.tracker._update_job(self.job_id, "❌ HandBrake failed.", progress=55, status="failed")
             return False
-        
-        logging.info(f"Transcoding completed: {final_output_paths}")
+
+        self.tracker._update_job(self.job_id, f"✅ Transcoding completed: {final_output_paths}", progress=100, status="done")
         return final_output_paths
+
+    def eject_disc(self):
+        """Ejects the disc drive after ripping is complete."""
+        try:
+            self.tracker._update_job(self.job_id, f"🔄 Ejecting disc from {self.drive}...")
+            subprocess.run(["eject", self.drive], check=True)
+            self.tracker._update_job(self.job_id, "💿 Disc ejected successfully.")
+        except subprocess.CalledProcessError as e:
+            self.tracker._update_job(self.job_id, f"⚠️ Warning: Could not eject disc ({e})")
 
     def get_mkv_files(self, dir_path: str):
         """Scans the output directory for MKV files."""
@@ -56,4 +64,4 @@ class BlurayRipper:
 
 if __name__ == "__main__":
     ripper = BlurayRipper("/dev/sr0", "output", skip_rip=False)
-    ripper.rip_disc()
+    ripper.rip_bluray()
