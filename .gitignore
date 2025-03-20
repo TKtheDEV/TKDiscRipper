@@ -1,6 +1,8 @@
 server.crt
 server.key
 requirements.old
+output/
+temp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

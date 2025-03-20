@@ -5,22 +5,34 @@ class HandBrakeHelper:
     """Helper class for transcoding videos using HandBrakeCLI."""
 
     @staticmethod
-    def transcode(input_paths: list[str], output_dir: str, preset: str = "Fast 1080p30") -> list[str]:
-        """Transcodes the MKV files using HandBrakeCLI."""
+    def transcode(input_dir: str, output_dir: str, preset: str = "Fast 1080p30") -> list[str]:
+        """Transcodes all MKV files in the directory using HandBrakeCLI."""
         output_files = []
-        
-        for input_path in input_paths:
-            output_file = os.path.join(output_dir, os.path.basename(input_path).replace(".mkv", ".mp4"))
 
-            command = ["flatpak", "run", "--command=HandBrakeCLI", "fr.handbrake.ghb",
-                    "-i", input_path, "-o", output_file, "--preset", preset]
+        # ✅ Find all MKV files in the directory
+        mkv_files = [f for f in os.listdir(input_dir) if f.endswith(".mkv")]
+        if not mkv_files:
+            print("❌ No MKV files found for transcoding.")
+            return []
+
+        print(f"🎥 Found {len(mkv_files)} MKV files for transcoding.")
+
+        for mkv_file in mkv_files:
+            input_path = os.path.join(input_dir, mkv_file)
+            output_file = os.path.join(output_dir, mkv_file)
+
+            command = [
+                "flatpak", "run", "--command=HandBrakeCLI", "fr.handbrake.ghb",
+                "-i", input_path, "-o", output_file, "--preset-import-file", preset
+            ]
 
             try:
+                print(f"🚀 Transcoding {input_path} -> {output_file}")
                 process = subprocess.run(command, capture_output=True, text=True, check=True)
                 print(process.stdout)
                 output_files.append(output_file)
             except subprocess.CalledProcessError as e:
-                print(f"Error during transcoding {input_path}: {e}")
+                print(f"❌ Error transcoding {input_path}: {e}")
                 output_files.append(None)  # Mark as failed
-        
+
         return output_files

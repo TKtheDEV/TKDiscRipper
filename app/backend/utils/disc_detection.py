@@ -1,20 +1,29 @@
 import subprocess
+import logging
 import os
 import time
 import requests
+from requests.auth import HTTPBasicAuth
+from .config_manager import get_config
 
 # API endpoint
-API_URL = "https://localhost:8000"
+API_URL = "https://[::1]:8000"
+
+# Load credentials from config
+config = get_config()
+USERNAME = config.get("auth", "username")
+PASSWORD = config.get("auth", "password")
 
 # Blacklisted drives
-BLACKLISTED_DRIVES = ["/dev/sr1"]
+BLACKLISTED_DRIVES = ["/dev/sr0"]
+active_jobs = set()  # ✅ Tracks ongoing jobs to prevent duplicates
 
 DISC_TYPES = {
-    "audio_cd": "cd",
+    "audio_cd": "audio_cd",
     "cd_rom": "otherdisc",
-    "dvd_video": "dvd",
+    "dvd_video": "dvd_video",
     "dvd_rom": "otherdisc",
-    "blu_ray_video": "bluray",
+    "blu_ray_video": "bluray_video",
     "blu_ray_rom": "otherdisc"
 }
 
@@ -61,34 +70,54 @@ def get_mount_point(drive):
         return None
 
 def start_ripping(drive, disc_type):
-    """Send an API request to start a ripping job."""
+    """Start a ripping job, ensuring no duplicate jobs start."""
     job_type = DISC_TYPES.get(disc_type, "otherdisc")
+
+    if drive in active_jobs:  # ✅ Prevent duplicate jobs
+        logging.info(f"⚠️ Job for {drive} is already running, skipping duplicate.")
+        return
+
+    active_jobs.add(drive)  # ✅ Mark drive as active
+
     try:
-        response = requests.post(f"{API_URL}/jobs/create", json={"drive_path": drive, "disc_type": job_type})
+        response = requests.post(
+            f"{API_URL}/jobs/create",
+            json={"drive_path": drive, "disc_type": job_type},
+            auth=HTTPBasicAuth(USERNAME, PASSWORD),  # Send authentication
+            verify=False  # Disable SSL verification (Optional)
+        )
         if response.status_code == 200:
-            print(f"✅ Started ripping job: {response.json()}")
+            print(f"✅ Started job: {response.json()}")
         else:
             print(f"❌ Failed to start job: {response.text}")
     except Exception as e:
-        print(f"Error calling API: {e}")
+        print(f"❌ Error calling API: {e}")
 
 def monitor_cdrom():
-    """Monitor for disc insertions and start ripping automatically."""
+    """Monitors for disc insertions and starts ripping, preventing duplicates."""
+    logging.info("🔍 Monitoring for disc insertions...")
+
     process = subprocess.Popen(["udevadm", "monitor", "--property"], stdout=subprocess.PIPE, text=True)
     drive = None
 
     for line in iter(process.stdout.readline, ""):
         line = line.strip()
+        
         if line.startswith("DEVNAME="):
             drive = line.split("=")[1]
+
         if "ID_CDROM_MEDIA=1" in line and drive and drive not in BLACKLISTED_DRIVES:
-            print(f"🎉 Disc inserted in {drive}")
-            time.sleep(3)
+            if drive in active_jobs:
+                continue  # ✅ Ignore duplicate event
+            logging.info(f"🎉 Disc inserted in {drive}")
+            time.sleep(2)  # ✅ Reduce rapid event firing
             disc_type = get_disc_type(drive)
-            print(f"📀 Detected {disc_type.upper()} - Starting job")
+            logging.info(f"📀 Detected {disc_type.upper()} - Starting job")
             start_ripping(drive, disc_type)
+
         elif "ID_CDROM_MEDIA=0" in line and drive:
-            print(f"💿 Disc ejected from {drive}")
+            logging.info(f"💿 Disc ejected from {drive}")
+            active_jobs.discard(drive)  # ✅ Free the drive for future jobs
 
 if __name__ == "__main__":
     print("🔍 Monitoring for disc insertions and ejections...")

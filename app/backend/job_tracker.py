@@ -1,27 +1,24 @@
 import threading
 import time
 import uuid
-import subprocess
 from collections import deque
 from typing import Dict, Optional
+from backend.dvd import DvdRipper
+from backend.cd import CdRipper
+from backend.bluray import BlurayRipper
 from backend.utils.config_manager import get_config
-from backend.cd import rip_cd
-from backend.dvd import rip_dvd
-from backend.bluray import rip_bluray
-from backend.otherdisc import rip_other
 
 class JobTracker:
-    """Tracks disc ripping jobs with real-time progress, logs, and API control."""
+    """Tracks disc ripping jobs with real-time progress and logs."""
 
     def __init__(self):
         self.jobs: Dict[str, Dict] = {}
         self.lock = threading.Lock()
 
     def start_job(self, drive_path: str, disc_type: str) -> str:
-        """Creates a new job and starts the actual ripping process."""
+        """Creates a new job and starts the ripping process."""
         job_id = str(uuid.uuid4())
 
-        # Get output directory from config
         config = get_config()
         output_folder = config.get("paths", "output_dir", fallback="output")
 
@@ -35,50 +32,42 @@ class JobTracker:
                 "elapsed_time": 0,
                 "progress": 0,
                 "status": "running",
-                "stdout_log": deque(maxlen=50),  # Store last 50 log lines
-                "process": None,  # Store the running subprocess for cancellation
+                "stdout_log": deque(maxlen=15),  # ✅ Stores last 15 log lines
             }
 
         threading.Thread(target=self._run_job, args=(job_id, drive_path, disc_type)).start()
         return job_id
 
     def _run_job(self, job_id: str, drive_path: str, disc_type: str):
-        """Executes the actual ripping process with real-time logging."""
+        """Runs the ripping job and captures logs."""
         job = self.jobs.get(job_id)
         if not job:
             return
 
-        # Get the correct ripping function and pass the job_id
-        rip_function = {
-            "audio_cd": rip_cd,
-            "dvd_video": rip_dvd,
-            "blu_ray_video": rip_bluray,
-        }.get(disc_type, rip_other)
-
         try:
-            # Start the ripping process (passing job_id)
-            process = rip_function(drive_path, job_id)
+            ripper = None
 
-            # Store the process for potential cancellation
-            with self.lock:
-                job["process"] = process
-
-            # Capture real-time logs and update progress
-            for line in iter(process.stdout.readline, ""):
-                line = line.strip()
-                if not line:
-                    continue
-
-                self._update_job(job_id, line)
-
-            # Wait for process completion
-            process.wait()
-
-            # Check exit code
-            if process.returncode == 0:
-                self._update_job(job_id, "✅ Ripping completed successfully.", completed=True)
+            # ✅ Choose correct ripper based on disc type
+            if disc_type in ["dvd", "dvd_video"]:
+                ripper = DvdRipper(drive_path, job_id)
+                rip_logs = ripper.rip_dvd()
+            elif disc_type in ["cd", "audio_cd"]:
+                ripper = CdRipper(drive_path, job_id)
+                rip_logs = ripper.rip_cd()
+            elif disc_type in ["bluray", "blu_ray_video"]:
+                ripper = BlurayRipper(drive_path, job_id)
+                rip_logs = ripper.rip_bluray()
             else:
-                self._update_job(job_id, f"❌ Ripping failed (Exit Code: {process.returncode})", failed=True)
+                self._update_job(job_id, "❌ Unknown disc type", failed=True)
+                return
+
+            # ✅ Capture logs in real-time
+            for log in rip_logs:
+                with self.lock:
+                    job["stdout_log"].append(log.strip())  # ✅ Append logs
+                    job["elapsed_time"] = time.time() - job["start_time"]
+
+            self._update_job(job_id, "✅ Ripping completed successfully.", completed=True)
 
         except Exception as e:
             self._update_job(job_id, f"❌ Error: {e}", failed=True)
@@ -104,27 +93,5 @@ class JobTracker:
             job = self.jobs.get(job_id)
             if job:
                 job["elapsed_time"] = time.time() - job["start_time"]
-            return job
-
-    def cancel_job(self, job_id: str) -> bool:
-        """Cancels a running job."""
-        with self.lock:
-            job = self.jobs.get(job_id)
-            if job and job["status"] == "running":
-                # Terminate the process if it's running
-                process = job.get("process")
-                if process and process.poll() is None:  # Process is still running
-                    process.terminate()
-                    process.wait()
-                    job["status"] = "canceled"
-                    self._update_job(job_id, "❌ Job canceled.")
-                    return True
-        return False
-
-    def get_job_logs(self, job_id: str) -> Optional[deque]:
-        """Returns the last 50 lines of stdout for the job."""
-        with self.lock:
-            job = self.jobs.get(job_id)
-            if job:
-                return list(job["stdout_log"])
-            return None
+                return job
+        return None

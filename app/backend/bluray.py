@@ -1,10 +1,9 @@
 import os
 import logging
 import subprocess
-from backend.utils.makemkv_int import MakeMKVHelper
-from backend.utils.handbrake_int import HandBrakeHelper
-from backend.job_tracker import JobTracker
-from backend.utils.config_manager import get_config
+from .utils.makemkv_int import MakeMKVHelper
+from .utils.handbrake_int import HandBrakeHelper
+from .utils.config_manager import get_config
 
 class BlurayRipper:
     def __init__(self, drive: str, job_id: str):
@@ -19,6 +18,8 @@ class BlurayRipper:
         self.output_dir = config.get("paths", "output_dir", fallback="output")
 
     def rip_bluray(self):
+        from .job_tracker import JobTracker  # Lazy import to avoid circular import
+
         """Runs the full Blu-ray ripping process with status updates."""
 
         # Step 1: Mark job as "starting"
