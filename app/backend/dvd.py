@@ -4,7 +4,7 @@ from backend.utils.handbrake_int import HandBrakeHelper
 from backend.utils.config_manager import get_config
 
 class DvdRipper:
-    def __init__(self, drive: str, job_id: str, skip_rip: bool = True):
+    def __init__(self, drive: str, job_id: str, skip_rip: bool = False):
         self.drive = drive
         self.job_id = job_id
         self.makemkv = MakeMKVHelper()

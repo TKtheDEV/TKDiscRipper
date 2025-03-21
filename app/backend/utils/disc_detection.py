@@ -15,7 +15,7 @@ USERNAME = config.get("auth", "username")
 PASSWORD = config.get("auth", "password")
 
 # Blacklisted drives
-BLACKLISTED_DRIVES = ["/dev/sr0"]
+BLACKLISTED_DRIVES = ["/dev/sr7"]
 active_jobs = set()  # ✅ Tracks ongoing jobs to prevent duplicates
 
 DISC_TYPES = {

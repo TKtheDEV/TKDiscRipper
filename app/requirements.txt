@@ -3,3 +3,4 @@ uvicorn
 psutil
 gputil
 setuptools
+requests
