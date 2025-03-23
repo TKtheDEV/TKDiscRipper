@@ -26,7 +26,7 @@ def get_cpu_model() -> str:
 
 def get_hwenc_info() -> Dict:
     try:
-        result = subprocess.run(["HandBrakeCLI", "-h"], capture_output=True, text=True, check=True)
+        result = subprocess.run(["flatpak", "run", "--command=HandBrakeCLI", "fr.handbrake.ghb", "-h"], capture_output=True, text=True, check=True)
         output = result.stdout.splitlines()
         encoders = {
             "nvenc": [line.strip() for line in output if "nvenc_" in line],
@@ -118,7 +118,7 @@ def get_system_info() -> Dict:
         "model": get_cpu_model(),
         "cores": psutil.cpu_count(logical=False),
         "threads": psutil.cpu_count(logical=True),
-        "frequency": psutil.cpu_freq().max,
+        "frequency": psutil.cpu_freq().current,
         "usage": psutil.cpu_percent(interval=1),
         "temperature": cpu_temp
     }

@@ -5,4 +5,5 @@ def rip_other(drive: str, job_id: str):
     """Handles unknown disc types."""
     tracker = JobTracker()
     tracker._update_job(job_id, "⚠️ Unknown disc type detected. No automatic ripper available.", progress=0, status="failed")
+    print("unknown disc function called")
     return None

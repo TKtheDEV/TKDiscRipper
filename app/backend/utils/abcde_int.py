@@ -36,7 +36,6 @@ def run_abcde(drive_path, config_file, output_format, additional_args=None):
             "-N",
             "-o", output_format,
             "-c", config_file,
-            "-x"
         ] + additional_args  # Append additional arguments if provided
 
         logging.info(f"Constructed Command: {' '.join(command)}")
