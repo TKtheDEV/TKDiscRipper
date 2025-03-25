@@ -1,7 +1,6 @@
 import psutil
 import platform
 import subprocess
-import GPUtil
 import json
 import time
 import socket
