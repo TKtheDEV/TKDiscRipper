@@ -3,6 +3,7 @@ import time
 import uuid
 from collections import deque
 from typing import Dict, Optional
+from backend.drive_tracker import get_drive_tracker
 from backend.dvd import DvdRipper
 from backend.cd import CdRipper
 from backend.bluray import BlurayRipper
@@ -14,11 +15,13 @@ class JobTracker:
     def __init__(self):
         self.jobs: Dict[str, Dict] = {}
         self.lock = threading.Lock()
+        self.drive_tracker = get_drive_tracker()
 
     def start_job(self, drive_path: str, disc_type: str) -> str:
         """Creates a new job and starts the ripping process."""
+        if not self.drive_tracker.is_available(drive_path):
+            raise ValueError(f"Drive {drive_path} is not available.")
         job_id = str(uuid.uuid4())
-
         config = get_config()
         output_folder = config.get("paths", "output_dir", fallback="output")
 
@@ -35,6 +38,8 @@ class JobTracker:
                 "stdout_log": deque(maxlen=15),  # ✅ Stores last 15 log lines
             }
 
+        print("Drive Path:", drive_path)
+        self.drive_tracker.mark_busy(drive_path, job_id)
         threading.Thread(target=self._run_job, args=(job_id, drive_path, disc_type)).start()
         return job_id
 
@@ -86,6 +91,9 @@ class JobTracker:
                 job["status"] = "completed"
             elif failed:
                 job["status"] = "failed"
+
+            if completed or failed:
+                self.drive_tracker.mark_free(job["drive"])
 
     def get_job_status(self, job_id: str) -> Optional[Dict]:
         """Returns the status of a given job."""

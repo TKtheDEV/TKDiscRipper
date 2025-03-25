@@ -1,10 +1,9 @@
 import subprocess
 import logging
-import os
 import time
 import requests
 from requests.auth import HTTPBasicAuth
-from .config_manager import get_config
+from backend.utils.config_manager import get_config
 
 # API endpoint
 API_URL = "https://[::1]:8000"
@@ -14,10 +13,7 @@ config = get_config()
 USERNAME = config.get("auth", "username")
 PASSWORD = config.get("auth", "password")
 
-# Blacklisted drives
-BLACKLISTED_DRIVES = ["/dev/sr7"]
-active_jobs = set()  # ✅ Tracks ongoing jobs to prevent duplicates
-
+# Mapping filesystem + folder detection to disc type
 DISC_TYPES = {
     "audio_cd": "audio_cd",
     "cd_rom": "otherdisc",
@@ -49,7 +45,7 @@ def get_disc_type(drive):
 
         return "other"
     except Exception as e:
-        print(f"Error detecting disc type: {e}")
+        logging.error(f"Error detecting disc type for {drive}: {e}")
         return "other"
 
 def has_folder(drive, folder_name):
@@ -66,35 +62,29 @@ def get_mount_point(drive):
         mount_point = result.stdout.strip().split('\n')[1:]
         return mount_point[0] if mount_point else None
     except Exception as e:
-        print(f"Error getting mount point for {drive}: {e}")
+        logging.error(f"Error getting mount point for {drive}: {e}")
         return None
 
 def start_ripping(drive, disc_type):
-    """Start a ripping job, ensuring no duplicate jobs start."""
+    """Start a ripping job via API. Let the backend decide availability."""
     job_type = DISC_TYPES.get(disc_type, "otherdisc")
-
-    if drive in active_jobs:  # ✅ Prevent duplicate jobs
-        logging.info(f"⚠️ Job for {drive} is already running, skipping duplicate.")
-        return
-
-    active_jobs.add(drive)  # ✅ Mark drive as active
 
     try:
         response = requests.post(
             f"{API_URL}/jobs/create",
             json={"drive_path": drive, "disc_type": job_type},
-            auth=HTTPBasicAuth(USERNAME, PASSWORD),  # Send authentication
-            verify=False  # Disable SSL verification (Optional)
+            auth=HTTPBasicAuth(USERNAME, PASSWORD),
+            verify=False
         )
         if response.status_code == 200:
-            print(f"✅ Started job: {response.json()}")
+            logging.info(f"✅ Started job: {response.json()}")
         else:
-            print(f"❌ Failed to start job: {response.text}")
+            logging.warning(f"❌ Could not start job for {drive}: {response.text}")
     except Exception as e:
-        print(f"❌ Error calling API: {e}")
+        logging.error(f"❌ Error calling API to start job: {e}")
 
 def monitor_cdrom():
-    """Monitors for disc insertions and starts ripping, preventing duplicates."""
+    """Monitors for disc insertions and starts ripping via backend API."""
     logging.info("🔍 Monitoring for disc insertions...")
 
     process = subprocess.Popen(["udevadm", "monitor", "--property"], stdout=subprocess.PIPE, text=True)
@@ -102,23 +92,25 @@ def monitor_cdrom():
 
     for line in iter(process.stdout.readline, ""):
         line = line.strip()
-        
+
         if line.startswith("DEVNAME="):
             drive = line.split("=")[1]
 
-        if "ID_CDROM_MEDIA=1" in line and drive and drive not in BLACKLISTED_DRIVES:
-            if drive in active_jobs:
-                continue  # ✅ Ignore duplicate event
-            logging.info(f"🎉 Disc inserted in {drive}")
-            time.sleep(2)  # ✅ Reduce rapid event firing
+        if "ID_CDROM_MEDIA=1" in line and drive:
+            logging.info(f"📥 Disc inserted in {drive}")
+            time.sleep(2)  # debounce
             disc_type = get_disc_type(drive)
-            logging.info(f"📀 Detected {disc_type.upper()} - Starting job")
+            logging.info(f"📀 Detected {disc_type.upper()} in {drive}")
             start_ripping(drive, disc_type)
 
         elif "ID_CDROM_MEDIA=0" in line and drive:
             logging.info(f"💿 Disc ejected from {drive}")
-            active_jobs.discard(drive)  # ✅ Free the drive for future jobs
-
-if __name__ == "__main__":
-    print("🔍 Monitoring for disc insertions and ejections...")
-    monitor_cdrom()
+            try:
+                # Optional: inform backend to free the drive
+                requests.delete(
+                    f"{API_URL}/jobs/{drive}",
+                    auth=HTTPBasicAuth(USERNAME, PASSWORD),
+                    verify=False
+                )
+            except Exception as e:
+                logging.warning(f"⚠️ Could not notify backend of eject: {e}")
