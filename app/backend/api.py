@@ -1,5 +1,5 @@
 import subprocess
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse, HTMLResponse
 from pydantic import BaseModel
 from backend.drive_tracker import get_drive_tracker
@@ -112,46 +112,85 @@ def open_drive(disc_type: str):
     except subprocess.CalledProcessError as e:
         return JSONResponse({"error": f"Failed to open drive: {str(e)}"}, status_code=500)
 
-#Frontend
-from backend.utils.get_systeminfo import get_system_info
 
+
+
+#Frontend
+# -------------------------------------------------------------------
+# SYSTEM INFO PARTIAL
+# -------------------------------------------------------------------
 @router.get("/partial/system", response_class=HTMLResponse)
 def partial_system():
     info = get_system_info()
-    html = f"""
-    <div class="tile" hx-get="/partial/system" hx-trigger="every 5s" hx-swap="outerHTML">
-      <h2>🖥️ System Information</h2>
-      <ul>
-        <li>OS: {info['os_info']}</li>
-        <li>CPU: {info['cpu_info']}</li>
-        <li>Memory: {info['memory_info']}</li>
-        <li>Storage: {info['storage_info']}</li>
-      </ul>
+
+    os_info = info["os_info"]
+    cpu = info["cpu_info"]
+    mem = info["memory_info"]
+    disk = info["storage_info"]
+    gpus = info["gpu_info"]
+    hwenc = info["hwenc_info"]
+
+    def fmt_bytes(b):
+        return f"{round(b / 1024 / 1024 / 1024, 1)} GB"
+
+    def tile(title, content):
+        return f"""<div class="tile"><h2>{title}</h2>{content}</div>"""
+
+    html = """
+    <div class="tile-row" hx-get="/api/partial/system" hx-trigger="every 5s" hx-swap="outerHTML">
     """
-    if info.get("gpu_info"):
-        html += "<h3>🎮 GPU(s)</h3>"
-        for gpu in info["gpu_info"]:
-            html += f"""
-            <div class="tile" style="margin-top: 0.5rem; background: #f0f4ff;">
-              <strong>{gpu['model']}</strong><br>
-              Utilization: {gpu['utilization']}<br>
-              Temp: {gpu['temperature']}<br>
-              Memory: {gpu['free_memory']} free of {gpu['total_memory']}<br>
-            </div>
-            """
-    else:
-        html += "<p>No GPUs found.</p>"
+
+    html += tile("CPU Info", f"""
+        {cpu['model']}<br>
+        {cpu['cores']} Cores / {cpu['threads']} Threads<br>
+        Clock: {cpu['frequency']} MHz<br>
+        Usage: {cpu['usage']}%<br>
+        Temperature: {cpu['temperature']} °C
+    """)
+
+    html += tile("RAM Info", f"""
+        Total: {fmt_bytes(mem['total'])}<br>
+        Used: {fmt_bytes(mem['used'])} ({mem['percent']}%)
+    """)
+
+    if isinstance(gpus, list):
+        for gpu in gpus:
+            html += tile("GPU", f"""
+                <strong>{gpu['model']}</strong><br>
+                Util: {gpu['utilization']}%<br>
+                Temp: {gpu['temperature']}°C<br>
+                Power: {gpu['power_draw']}W<br>
+                VRAM: {fmt_bytes(gpu['used_memory'])} / {fmt_bytes(gpu['total_memory'])} ({gpu['percent_memory']}%)
+            """)
+
+    html += tile("HWENC", "<br>".join([
+        f"<b>{k.upper()}</b>: ✅ <small>({', '.join(hwenc['encoders'].get(k, []))})</small>" if hwenc.get(k)
+        else f"<b>{k.upper()}</b>: ❌"
+        for k in ["nvenc", "qsv", "vce"]
+    ]))
+
+    html += tile("Storage Info", f"""
+        Total: {fmt_bytes(disk['total'])}<br>
+        Used: {fmt_bytes(disk['used'])} ({disk['percent']}%)
+    """)
+
+    html += tile("OS Info", f"""
+        OS: {os_info['os']} {os_info['os_version']}<br>
+        Kernel: {os_info['kernel']}<br>
+        Uptime: {os_info['uptime']}
+    """)
 
     html += "</div>"
+
     return HTMLResponse(content=html)
 
-
-from backend.utils.get_driveinfo import get_drive_info
-
+# -------------------------------------------------------------------
+# DRIVES PARTIAL
+# -------------------------------------------------------------------
 @router.get("/partial/drives", response_class=HTMLResponse)
 def partial_drives():
     drives = get_drive_info()
-    html = '<div class="tile" hx-get="/partial/drives" hx-trigger="every 5s" hx-swap="outerHTML">'
+    html = '<div class="tile" hx-get="/api/partial/drives" hx-trigger="every 5s" hx-swap="outerHTML">'
     html += '<h2>💿 Drives</h2>'
     html += '''
       <button onclick="openDrive('dvd')">🟢 Open drive for DVD</button>
@@ -166,14 +205,14 @@ def partial_drives():
     html += '</ul></div>'
     return HTMLResponse(content=html)
 
-
-from backend.instance import tracker
-
+# -------------------------------------------------------------------
+# JOBS PARTIAL
+# -------------------------------------------------------------------
 @router.get("/partial/jobs", response_class=HTMLResponse)
 def partial_jobs():
     jobs = list(tracker.jobs.values())
 
-    html = '<div class="tile" hx-get="/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">'
+    html = '<div class="tile" hx-get="/api/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">'
     html += '<h2>📝 Jobs</h2>'
 
     running = [j for j in jobs if j["status"] == "running"]

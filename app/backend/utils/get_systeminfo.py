@@ -81,10 +81,10 @@ def get_gpu_info() -> Dict:
                     "total_memory": data.get("vram", {}).get("total", 0),
                     "used_memory": data.get("vram", {}).get("used", 0),
                     "free_memory": data.get("vram", {}).get("total", 0) - data.get("vram", {}).get("used", 0),
-                    "percent_memory": (data.get("vram", {}).get("used", 0) / data.get("vram", {}).get("total", 1)) * 100,
-                    "utilization": data.get("busy_percent", 0),
+                    "percent_memory": round((data.get("vram", {}).get("used", 0) / data.get("vram", {}).get("total", 1)) * 100, 1),
+                    "utilization": round(data.get("busy_percent", 0.0), 1),
                     "temperature": temperature,
-                    "power_draw": data.get("power", {}).get("current", 0.0)
+                    "power_draw": round(data.get("power", {}).get("current", 0.0), 1)
                 })
     
     return gpu_info if gpu_info else "No GPU detected or LACT not running"
@@ -110,14 +110,14 @@ def get_system_info() -> Dict:
         with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
             cpu_temp = int(f.read().strip()) / 1000.0
     except (FileNotFoundError, ValueError):
-        cpu_temp = "Not available"
+        cpu_temp = "Could not be read"
 
     # CPU Information
     cpu_info = {
         "model": get_cpu_model(),
         "cores": psutil.cpu_count(logical=False),
         "threads": psutil.cpu_count(logical=True),
-        "frequency": psutil.cpu_freq().current,
+        "frequency": int(psutil.cpu_freq().current),
         "usage": psutil.cpu_percent(interval=1),
         "temperature": cpu_temp
     }

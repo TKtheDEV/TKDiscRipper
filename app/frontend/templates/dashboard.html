@@ -7,37 +7,48 @@
   <script src="https://unpkg.com/htmx.org@1.9.4"></script>
 </head>
 <body>
-  <h1>📀 TKDiscRipper Dashboard</h1>
 
-  <div class="grid">
-
-    <!-- System Info Tile -->
-    <div hx-get="/partial/system" hx-trigger="every 5s" hx-swap="outerHTML">
-      Loading system info...
+  <header class="header-bar">
+    <div class="title-left">
+      <span class="icon">📀</span>
+      <h1>TKDiscRipper Dashboard</h1>
     </div>
-
-    <!-- Drives Tile -->
-    <div hx-get="/partial/drives" hx-trigger="every 5s" hx-swap="outerHTML">
-      Loading drives...
+    <div class="title-right">
+      <a href="/settings" title="Settings">⚙️</a>
     </div>
+  </header>
 
-    <!-- Jobs Tile -->
-    <div hx-get="/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">
-      Loading jobs...
+  <main class="content">
+
+    <!-- System Info Section -->
+    <div class="section">
+      <h2>System Information</h2>
+      <div class="tile-row" hx-get="/partial/system" hx-trigger="every 5s" hx-swap="outerHTML">
+        Loading system info...
+      </div>
     </div>
+  
+    <!-- Drives Section -->
+    <div class="section">
+      <h2>Drives</h2>
+      <div hx-get="/partial/drives" hx-trigger="every 5s" hx-swap="outerHTML">
+        Loading drives...
+      </div>
+    </div>
+  
+    <!-- Jobs Section -->
+    <div class="section">
+      <h2>Jobs</h2>
+      <div hx-get="/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">
+        Loading jobs...
+      </div>
+    </div>
+  
+  </main>
+  
 
-  </div>
-
-  <script>
-    function openDrive(type) {
-      fetch(`/drives/open?disc_type=${type}`, {
-        method: "POST",
-        headers: { Authorization: "Basic " + btoa("admin:admin") }
-      })
-        .then(r => r.json())
-        .then(j => alert("Opened: " + (j.drive || j.detail)))
-        .catch(err => alert("Failed: " + err));
-    }
-  </script>
 </body>
 </html>
+
+
+⚙️

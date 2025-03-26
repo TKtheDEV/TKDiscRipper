@@ -1,10 +1,10 @@
 body {
-    font-family: sans-serif;
-    background-color: #f7f9fb;
-    color: #333;
-    margin: 0;
-    padding: 1rem;
-  }
+  font-family: sans-serif;
+  background-color: #f5f7fa;
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
   h1 {
     margin-bottom: 1rem;
   }
@@ -34,5 +34,125 @@ body {
   }
   .job-card.running {
     border-color: #2196f3;
+  }
+
+  .subtile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  .subtile {
+    background: #f3f6fc;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .gpu-tile {
+    margin-top: 0.5rem;
+    background: #e8f0ff;
+    padding: 0.75rem;
+    border-radius: 6px;
+  }
+  
+
+  body {
+    font-family: sans-serif;
+    background-color: #f5f7fa;
+    color: #333;
+    margin: 0;
+  }
+  
+  .header-bar {
+    background-color: #333;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0.75rem;
+  }
+  
+  .header-bar h1 {
+    margin: 0;
+    font-size: 1.4rem;
+  }
+  
+  .icon {
+    font-size: 1.6rem;
+    margin-right: 0.5rem;
+  }
+  
+  .title-left {
+    display: flex;
+    align-items: center;
+  }
+  
+  .title-right a {
+    font-size: 1.3rem;
+    color: white;
+    text-decoration: none;
+  }
+  
+  main.content {
+    padding: 1rem;
+  }
+  
+  .tile-row {
+    display: flex;
+    overflow-x: auto;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .tile-section {
+    margin-bottom: 1.5rem;
+  }
+  
+  .tile, .subtile, .gpu-tile {
+    background: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    min-width: 220px;
+    flex: 0 0 auto;
+  }
+  
+  .tile h2 {
+    font-size: 1rem;
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+  }
+  
+
+
+  .section {
+    border: 2px solid #2c2c2c;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    background-color: #fff;
+  }
+  
+  .section h2 {
+    margin-top: 0;
+    color: #2c2c2c;
+  }
+  
+  .tile-row {
+    display: flex;
+    overflow-x: auto;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .tile {
+    background: #f9f9f9;
+    padding: 0.75rem;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px #ddd;
+    min-width: 200px;
+    flex: 0 0 auto;
+    color: #2c2c2c;
   }
   
