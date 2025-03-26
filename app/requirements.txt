@@ -3,3 +3,4 @@ uvicorn
 psutil
 setuptools
 requests
+jinja2

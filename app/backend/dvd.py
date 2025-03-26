@@ -1,47 +1,44 @@
-import os
-from backend.utils.makemkv_int import MakeMKVHelper
-from backend.utils.handbrake_int import HandBrakeHelper
+from backend.rippers.video_disc_ripper import VideoDiscRipper
 from backend.utils.config_manager import get_config
+from backend.utils.handbrake_int import HandBrakeHelper
+from backend.utils.makemkv_int import MakeMKVHelper
+import os
 
-class DvdRipper:
-    def __init__(self, drive: str, job_id: str, skip_rip: bool = False):
-        self.drive = drive
-        self.job_id = job_id
-        self.makemkv = MakeMKVHelper()
-        self.handbrake = HandBrakeHelper()
-        
+class DvdRipper(VideoDiscRipper):
+    def __init__(self, job_id: str, drive_path: str):
+        super().__init__(job_id, drive_path)
         config = get_config()
-        self.temp_dir = os.path.expanduser(config.get("General", "tempdirectory", fallback="~/TKDiscRipper/temp/DVD"))
-        self.output_dir = os.path.expanduser(config.get("DVD", "outputdirectory", fallback="~/TKDiscRipper/output/DVD"))
-        self.skip_rip = skip_rip
-        self.use_handbrake = config.get("DVD", "useHandbrake", fallback="false").lower() == "true"
-        self.preset = config.get("DVD", "preset", fallback="Fast 1080p30")
+        self.base_temp = os.path.expanduser(config.get("General", "tempdirectory"))
+        self.base_output = os.path.expanduser(config.get("DVD", "outputdirectory"))
+        self.handbrake_preset = config.get("DVD", "handbrakepreset")
+        self.handbrake_format = config.get("DVD", "handbrakeformat", fallback="mkv")
 
-    def rip_dvd(self):
-        """Runs the full DVD ripping process and yields logs in real-time."""
-        yield f"🚀 Job {self.job_id} started for {self.drive}"
+    def rip(self):
+        self.setup_dirs(self.base_temp, self.base_output, "DVD")
+        yield f"📁 Temp Dir: {self.temp_dir}"
+        yield f"📤 Output Dir: {self.output_dir}"
+        yield f"🎬 Disc Label: {self.disc_label}"
 
-        if not self.skip_rip:
-            yield f"📀 Ripping DVD {self.drive} with MakeMKV..."
-            mkv_output_paths = self.makemkv.rip_disc(self.drive, self.temp_dir)
+        yield "🔹 Starting MakeMKV..."
+        makemkv_result = MakeMKVHelper.rip_disc(self.drive_path, self.temp_dir)
 
-            if not mkv_output_paths:
-                yield "❌ MakeMKV failed!"
-                return
+        if not makemkv_result:
+            yield "❌ MakeMKV failed."
+            return
 
-            yield f"✅ MakeMKV completed. MKV files saved to: {self.temp_dir}"
-
-        if self.use_handbrake:
-            yield "🎥 Transcoding all MKV files with HandBrake..."
-            final_output_paths = self.handbrake.transcode(self.temp_dir, self.output_dir, self.preset)
-
-            if not final_output_paths:
-                yield "❌ HandBrake failed!"
-                return
-
-            yield f"✅ Transcoding completed. Output files saved to: {self.output_dir}"
+        if self.handbrake_preset:
+            yield "🎞️ Starting HandBrake..."
+            output_files = HandBrakeHelper.transcode(
+                self.temp_dir,
+                self.output_dir,
+                preset=self.handbrake_preset
+            )
+            if any(output_files):
+                yield f"✅ Transcoding complete. Files in: {self.output_dir}"
+            else:
+                yield "⚠️ Transcoding failed or skipped."
         else:
-            yield "⏩ Skipping HandBrake transcoding"
+            yield "📦 Skipping HandBrake. Keeping raw MKV files."
 
 if __name__ == "__main__":
     ripper = DvdRipper("/dev/sr1", "qwerty", skip_rip=True)

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>TKDiscRipper Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.4"></script>
+</head>
+<body>
+  <h1>📀 TKDiscRipper Dashboard</h1>
+
+  <div class="grid">
+
+    <!-- System Info Tile -->
+    <div hx-get="/partial/system" hx-trigger="every 5s" hx-swap="outerHTML">
+      Loading system info...
+    </div>
+
+    <!-- Drives Tile -->
+    <div hx-get="/partial/drives" hx-trigger="every 5s" hx-swap="outerHTML">
+      Loading drives...
+    </div>
+
+    <!-- Jobs Tile -->
+    <div hx-get="/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">
+      Loading jobs...
+    </div>
+
+  </div>
+
+  <script>
+    function openDrive(type) {
+      fetch(`/drives/open?disc_type=${type}`, {
+        method: "POST",
+        headers: { Authorization: "Basic " + btoa("admin:admin") }
+      })
+        .then(r => r.json())
+        .then(j => alert("Opened: " + (j.drive || j.detail)))
+        .catch(err => alert("Failed: " + err));
+    }
+  </script>
+</body>
+</html>

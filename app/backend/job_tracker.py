@@ -18,30 +18,46 @@ class JobTracker:
         self.drive_tracker = get_drive_tracker()
 
     def start_job(self, drive_path: str, disc_type: str) -> str:
-        """Creates a new job and starts the ripping process."""
+        job_id = str(uuid.uuid4())
+        drive_path = os.path.realpath(drive_path)
+
         if not self.drive_tracker.is_available(drive_path):
             raise ValueError(f"Drive {drive_path} is not available.")
-        job_id = str(uuid.uuid4())
-        config = get_config()
-        output_folder = config.get("paths", "output_dir", fallback="output")
 
+        # 🔁 Select ripper
+        if disc_type == "dvd":
+            from backend.dvd import DvdRipper
+            ripper = DvdRipper(job_id, drive_path)
+            ripper.setup_dirs(ripper.base_temp, ripper.base_output, "DVD")
+        elif disc_type == "bd":
+            from backend.bluray import BlurayRipper
+            ripper = BlurayRipper(job_id, drive_path)
+            ripper.setup_dirs(ripper.base_temp, ripper.base_output, "BLURAY")
+        else:
+            raise ValueError(f"Unsupported disc type: {disc_type}")
+
+        self.drive_tracker.mark_busy(drive_path, job_id)
+
+        # ✅ Store full job metadata
         with self.lock:
             self.jobs[job_id] = {
                 "job_id": job_id,
                 "disc_type": disc_type,
                 "drive": drive_path,
-                "output_folder": output_folder,
+                "disc_label": ripper.disc_label,
+                "temp_folder": ripper.temp_dir,
+                "output_folder": ripper.output_dir,
                 "start_time": time.time(),
                 "elapsed_time": 0,
                 "progress": 0,
                 "status": "running",
-                "stdout_log": deque(maxlen=15),  # ✅ Stores last 15 log lines
+                "stdout_log": deque(maxlen=15),
             }
 
-        print("Drive Path:", drive_path)
-        self.drive_tracker.mark_busy(drive_path, job_id)
+        # 🔁 Kick off thread
         threading.Thread(target=self._run_job, args=(job_id, drive_path, disc_type)).start()
         return job_id
+
 
     def _run_job(self, job_id: str, drive_path: str, disc_type: str):
         """Runs the ripping job and captures logs."""

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 import uvicorn
 import threading
 import os
@@ -9,9 +9,14 @@ from backend.utils.config_manager import get_config
 from backend.utils.disc_detection import monitor_cdrom
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 app = FastAPI(title="TKDiscRipper", version="1.0")
 security = HTTPBasic()
+
+app.mount("/static", StaticFiles(directory="app/frontend/static"), name="static")
+templates = Jinja2Templates(directory="app/frontend/templates")
 
 # Load config for credentials
 config = get_config()
@@ -66,6 +71,15 @@ def start_disc_detection():
 @app.on_event("startup")
 def startup_event():
     start_disc_detection()
+
+
+#Frontend
+@app.get("/", dependencies=[Depends(authenticate)])
+def dashboard(request: Request):
+    from backend.instance import tracker
+    jobs = list(tracker.jobs.values())
+    return templates.TemplateResponse("dashboard.html", {"request": request, "jobs": jobs})
+
 
 if __name__ == "__main__":
     cert_file = "config/server.crt"
