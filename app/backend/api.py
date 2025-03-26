@@ -137,7 +137,7 @@ def partial_system():
         return f"""<div class="tile"><h2>{title}</h2>{content}</div>"""
 
     html = """
-    <div class="tile-row" hx-get="/api/partial/system" hx-trigger="every 5s" hx-swap="outerHTML">
+    <div class="tile-row" hx-get="/partial/system" hx-trigger="every 5s" hx-swap="outerHTML">
     """
 
     html += tile("CPU Info", f"""
@@ -163,11 +163,31 @@ def partial_system():
                 VRAM: {fmt_bytes(gpu['used_memory'])} / {fmt_bytes(gpu['total_memory'])} ({gpu['percent_memory']}%)
             """)
 
-    html += tile("HWENC", "<br>".join([
-        f"<b>{k.upper()}</b>: ✅ <small>({', '.join(hwenc['encoders'].get(k, []))})</small>" if hwenc.get(k)
-        else f"<b>{k.upper()}</b>: ❌"
-        for k in ["nvenc", "qsv", "vce"]
-    ]))
+    enc_lines = []
+    if hwenc.get("nvenc"):
+        enc_lines.append("NVIDIA NVENC: ✔")
+    else:
+        enc_lines.append("NVIDIA NVENC: ✘")
+
+    if hwenc.get("vce"):
+        enc_lines.append("AMD VCE: ✔")
+    else:
+        enc_lines.append("AMD VCE: ✘")
+
+    if hwenc.get("qsv"):
+        enc_lines.append("Intel QSV: ✔")
+    else:
+        enc_lines.append("Intel QSV: ✘")
+
+    all_codecs = []
+    for codec_list in hwenc["encoders"].values():
+        all_codecs.extend(codec_list)
+    all_codecs = " ".join(sorted(set(all_codecs)))
+
+    html += tile("HWENC", f"""
+    {'<br>'.join(enc_lines)}<br><br>
+    <small><strong>Supported Codecs:</strong><br>{all_codecs}</small>
+    """)
 
     html += tile("Storage Info", f"""
         Total: {fmt_bytes(disk['total'])}<br>
@@ -190,7 +210,7 @@ def partial_system():
 @router.get("/partial/drives", response_class=HTMLResponse)
 def partial_drives():
     drives = get_drive_info()
-    html = '<div class="tile" hx-get="/api/partial/drives" hx-trigger="every 5s" hx-swap="outerHTML">'
+    html = '<div class="tile" hx-get="/partial/drives" hx-trigger="every 5s" hx-swap="outerHTML">'
     html += '<h2>💿 Drives</h2>'
     html += '''
       <button onclick="openDrive('dvd')">🟢 Open drive for DVD</button>
@@ -212,7 +232,7 @@ def partial_drives():
 def partial_jobs():
     jobs = list(tracker.jobs.values())
 
-    html = '<div class="tile" hx-get="/api/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">'
+    html = '<div class="tile" hx-get="/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">'
     html += '<h2>📝 Jobs</h2>'
 
     running = [j for j in jobs if j["status"] == "running"]
