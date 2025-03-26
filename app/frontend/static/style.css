@@ -1,76 +1,30 @@
+/* ==== Base Styles ==== */
 body {
-  font-family: sans-serif;
-  background-color: #f5f7fa;
-  color: #333;
-  margin: 0;
-  padding: 0;
-}
-  h1 {
-    margin-bottom: 1rem;
-  }
-  .tile {
-    background: #fff;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-  .tile h2 {
-    margin-top: 0;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1rem;
-  }
-  .job-card {
-    padding: 0.5rem;
-    margin: 0.5rem 0;
-    background: #eef2f7;
-    border-left: 4px solid #6c8cff;
-  }
-  .job-card.completed {
-    border-color: #4caf50;
-  }
-  .job-card.running {
-    border-color: #2196f3;
-  }
-
-  .subtile-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
-    margin-top: 0.5rem;
-  }
-  .subtile {
-    background: #f3f6fc;
-    padding: 0.75rem;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
-  }
-  .gpu-tile {
-    margin-top: 0.5rem;
-    background: #e8f0ff;
-    padding: 0.75rem;
-    border-radius: 6px;
-  }
-  
-
-  body {
     font-family: sans-serif;
     background-color: #f5f7fa;
     color: #333;
     margin: 0;
+    padding: 0;
   }
   
+  main.content {
+    padding: 1rem;
+    padding-top: 5rem; /* for fixed header */
+  }
+  
+  /* ==== Header ==== */
   .header-bar {
-    background-color: #333;
+    background-color: #2c2c2c;
     color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 0.75rem;
+    padding: 0.75rem 1.5rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
   }
   
   .header-bar h1 {
@@ -94,38 +48,7 @@ body {
     text-decoration: none;
   }
   
-  main.content {
-    padding: 1rem;
-  }
-  
-  .tile-row {
-    display: flex;
-    overflow-x: auto;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  .tile-section {
-    margin-bottom: 1.5rem;
-  }
-  
-  .tile, .subtile, .gpu-tile {
-    background: #fff;
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    min-width: 220px;
-    flex: 0 0 auto;
-  }
-  
-  .tile h2 {
-    font-size: 1rem;
-    margin-top: 0;
-    margin-bottom: 0.5rem;
-  }
-  
-
-
+  /* ==== Section Container ==== */
   .section {
     border: 2px solid #2c2c2c;
     border-radius: 6px;
@@ -139,6 +62,7 @@ body {
     color: #2c2c2c;
   }
   
+  /* ==== Tiles Layout ==== */
   .tile-row {
     display: flex;
     overflow-x: auto;
@@ -152,7 +76,52 @@ body {
     border-radius: 6px;
     box-shadow: inset 0 0 0 1px #ddd;
     min-width: 200px;
+    max-width: 240px;
     flex: 0 0 auto;
     color: #2c2c2c;
+  
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;      /* ⬅️ Top/left-align contents */
+    justify-content: flex-start;  /* ⬅️ Align vertically to top */
+  }
+  
+  /* ==== Tile Content Formatting ==== */
+  .tile h2 {
+    font-size: 1rem;
+    margin: 0 0 0.5rem 0;
+    color: #2c2c2c;
+  }
+
+  /* Bold label with ellipsis */
+  .tile strong {
+    font-weight: 600;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    font-size: 0.95rem;  /* ⬅️ Smaller than h2 */
+  }
+  
+  /* Small text (e.g. codec list) */
+  .tile small {
+    font-size: 0.85rem;
+    color: #555;
+  }
+  
+  /* ==== Jobs/Drive Cards (optional extensions) ==== */
+  .job-card {
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+    background: #eef2f7;
+    border-left: 4px solid #6c8cff;
+    border-radius: 4px;
+  }
+  .job-card.running {
+    border-color: #2196f3;
+  }
+  .job-card.completed {
+    border-color: #4caf50;
   }
   

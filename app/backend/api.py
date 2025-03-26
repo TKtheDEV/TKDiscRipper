@@ -141,22 +141,22 @@ def partial_system():
     """
 
     html += tile("CPU Info", f"""
-        {cpu['model']}<br>
+        <strong title="{cpu['model']}">{cpu['model']}</strong><br>
         {cpu['cores']} Cores / {cpu['threads']} Threads<br>
         Clock: {cpu['frequency']} MHz<br>
         Usage: {cpu['usage']}%<br>
         Temperature: {cpu['temperature']} °C
     """)
 
-    html += tile("RAM Info", f"""
-        Total: {fmt_bytes(mem['total'])}<br>
-        Used: {fmt_bytes(mem['used'])} ({mem['percent']}%)
+    html += tile("Memory", f"""
+        <b>RAM used:</b> {fmt_bytes(mem['used'])} / {fmt_bytes(mem['total'])} ({mem['percent']}%)<br>
+        <b>Disk used:</b> {fmt_bytes(disk['used'])} / {fmt_bytes(disk['total'])} ({disk['percent']}%)
     """)
 
     if isinstance(gpus, list):
         for gpu in gpus:
             html += tile("GPU", f"""
-                <strong>{gpu['model']}</strong><br>
+                <strong title="{gpu['model']}">{gpu['model']}</strong><br>
                 Util: {gpu['utilization']}%<br>
                 Temp: {gpu['temperature']}°C<br>
                 Power: {gpu['power_draw']}W<br>
@@ -186,18 +186,14 @@ def partial_system():
 
     html += tile("HWENC", f"""
     {'<br>'.join(enc_lines)}<br><br>
-    <small><strong>Supported Codecs:</strong><br>{all_codecs}</small>
-    """)
-
-    html += tile("Storage Info", f"""
-        Total: {fmt_bytes(disk['total'])}<br>
-        Used: {fmt_bytes(disk['used'])} ({disk['percent']}%)
+    <strong title=Supported Codecs:>Supported Codecs:</strong><small>{all_codecs}</small>
     """)
 
     html += tile("OS Info", f"""
-        OS: {os_info['os']} {os_info['os_version']}<br>
-        Kernel: {os_info['kernel']}<br>
-        Uptime: {os_info['uptime']}
+        <b>OS:</b> {os_info['os']}<br>
+        <b>Version:</b> {os_info['os_version']}<br>
+        <b>Kernel:</b> {os_info['kernel']}<br>
+        <b>Uptime:</b> {os_info['uptime']}
     """)
 
     html += "</div>"
