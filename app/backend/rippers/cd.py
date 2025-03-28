@@ -13,14 +13,16 @@ class CdRipper(BaseRipper):
         self.additional_args = config.get("CD", "additionaloptions", fallback="").split()
 
     def rip(self):
-        update_job(self.job_id, log=f"Starting CD rip on {self.drive_path}")
+        def log(msg): update_job(self.job_id, log=msg)
+
+        update_job(self.job_id, operation="Ripping", log="▶️ Starting disc backup using abcde...", status="Running abcde to back up audio cd...", progress=10)
 
         success = run_abcde(
-            job_id=self.job_id,
             drive_path=self.drive_path,
             config_path=self.config_path,
             output_format=self.output_format,
-            additional_args=self.additional_args
+            additional_args=self.additional_args,
+            on_output=log
         )
 
         if success:

@@ -1,5 +1,6 @@
 import os
 import shutil
+import re
 
 from backend.rippers.base import BaseRipper
 from backend.utils.config_manager import get_config
@@ -14,11 +15,13 @@ class DvdRipper(BaseRipper):
         self.base_temp = os.path.expanduser(config.get("General", "tempdirectory"))
         self.base_output = os.path.expanduser(config.get("DVD", "outputdirectory"))
         self.handbrake_enabled = config.get("DVD", "usehandbrake", fallback=True)
-        self.handbrake_preset = config.get("DVD", "handbrakepreset")
+        self.handbrake_preset = os.path.expanduser(config.get("DVD", "handbrakepreset"))
         self.handbrake_format = config.get("DVD", "handbrakeformat", fallback="mkv")
 
     def rip(self):
         self.setup_dirs(self.base_temp, self.base_output)
+
+        def log(msg): update_job(self.job_id, log=msg)
 
         yield f"📁 Temp Dir: {self.temp_dir}"
         yield f"🎬 Disc Label: {self.disc_label}"
@@ -26,17 +29,20 @@ class DvdRipper(BaseRipper):
         # Start MakeMKV
         yield "🔹 Starting MakeMKV..."
         update_job(self.job_id, operation="Ripping Disc", status="Using MakeMKV to rip disc...", progress=5)
-        makemkv_result = MakeMKVHelper.rip_disc(self.drive_path, self.temp_dir)
+        makemkv_result = MakeMKVHelper.rip_disc(self.drive_path, self.temp_dir, on_output=log)
         update_job(self.job_id, operation="Ripping Disc", status="Finished ripping the disc", progress=50)
 
         if not makemkv_result:
             update_job(self.job_id, log="❌ MakeMKV failed", progress=100, status="failed")
+            yield "❌ MakeMKV failed"
             return
 
-        # Output folder (user may have edited it via UI)
-        job = get_job(self.job_id)
-        output_dir = job.get("output_folder", self.output_dir)
+        # Create output folder with label as subdirectory
+        job = get_job(self.job_id) or {}
+        label_safe = re.sub(r"[^\w.-]", "_", self.disc_label)[:64]
+        output_dir = os.path.join(job.get("output_folder", self.output_dir), label_safe)
         os.makedirs(output_dir, exist_ok=True)
+
         yield f"📤 Output Dir: {output_dir}"
 
         if self.handbrake_enabled:
@@ -46,7 +52,8 @@ class DvdRipper(BaseRipper):
             output_files = HandBrakeHelper.transcode(
                 self.temp_dir,
                 output_dir,
-                preset=self.handbrake_preset
+                preset=self.handbrake_preset,
+                on_output=log
             )
 
             if any(output_files):
@@ -64,7 +71,7 @@ class DvdRipper(BaseRipper):
                 src = os.path.join(self.temp_dir, f)
                 dst = os.path.join(output_dir, f)
                 shutil.copy2(src, dst)
-                update_job(self.job_id, log=f"📄 Copied {f}")
+                log(f"📄 Copied {f}")
 
             update_job(self.job_id, progress=100, status="Raw MKVs copied", operation="complete")
             yield f"✅ Copied {len(mkv_files)} MKV file(s) to output."

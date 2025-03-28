@@ -85,6 +85,13 @@ def delete_job(job_id: str):
 def list_jobs():
     return list(job_tracker.jobs.values())
 
+@router.get("/jobs/{job_id}/json")
+def get_job_json(job_id: str):
+    job = job_tracker.get_job_status(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
 # ========================
 # ==== DRIVE HANDLING ====
 # ========================

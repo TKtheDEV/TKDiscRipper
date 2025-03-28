@@ -11,12 +11,13 @@ API_URL = "https://[::1]:8000"
 AUTH = HTTPBasicAuth(config.get("auth", "username"), config.get("auth", "password"))
 
 def get_job(job_id: str) -> dict:
-    """
-    Get a job's current state from the API.
-    """
-    r = requests.get(f"{API_URL}/jobs/{job_id}", auth=AUTH, timeout=5, verify=False)
-    r.raise_for_status()
-    return r.json()
+    try:
+        r = requests.get(f"{API_URL}/jobs/{job_id}/json", auth=AUTH, timeout=5, verify=False)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        print(f"❌ get_job({job_id}) failed: {e}")
+        return {}
 
 def update_job(job_id: str, **kwargs):
     """

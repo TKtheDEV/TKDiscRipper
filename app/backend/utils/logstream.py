@@ -1,13 +1,14 @@
 import subprocess
+from typing import Callable
 
 def stream_subprocess(
     command: list[str],
-    job_id: str,
-    update_func,
+    on_output: Callable[[str], None] = None,
     capture_output: bool = False
 ) -> tuple[int, str | None]:
     """
-    Runs a command, streams its output to the job log, and optionally captures it.
+    Runs a command, streams its output line-by-line via on_output(),
+    and optionally captures it.
 
     Returns:
         (exit_code, full_output or None)
@@ -25,7 +26,8 @@ def stream_subprocess(
     for line in iter(process.stdout.readline, ''):
         line = line.strip()
         if line:
-            update_func(job_id, log=line)
+            if on_output:
+                on_output(line)
             if capture_output:
                 captured.append(line)
 
