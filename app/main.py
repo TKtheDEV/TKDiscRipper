@@ -76,8 +76,8 @@ def startup_event():
 #Frontend
 @app.get("/", dependencies=[Depends(authenticate)])
 def dashboard(request: Request):
-    from backend.instance import tracker
-    jobs = list(tracker.jobs.values())
+    from backend.job_tracker import job_tracker
+    jobs = list(job_tracker.jobs.values())
     return templates.TemplateResponse("dashboard.html", {"request": request, "jobs": jobs})
 
 

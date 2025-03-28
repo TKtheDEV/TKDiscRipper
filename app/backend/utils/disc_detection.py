@@ -1,5 +1,6 @@
 import subprocess
 import logging
+import os
 import time
 import requests
 from requests.auth import HTTPBasicAuth
@@ -16,11 +17,11 @@ PASSWORD = config.get("auth", "password")
 # Mapping filesystem + folder detection to disc type
 DISC_TYPES = {
     "audio_cd": "audio_cd",
-    "cd_rom": "otherdisc",
+    "cd_rom": "cd_rom",
     "dvd_video": "dvd_video",
-    "dvd_rom": "otherdisc",
+    "dvd_rom": "dvd_rom",
     "blu_ray_video": "bluray_video",
-    "blu_ray_rom": "otherdisc"
+    "blu_ray_rom": "blu_ray_rom"
 }
 
 def get_disc_type(drive):
@@ -43,7 +44,9 @@ def get_disc_type(drive):
         if filesystem_type == '':
             return "audio_cd"
 
-        return "other"
+        else:
+            return "other_disc"
+
     except Exception as e:
         logging.error(f"Error detecting disc type for {drive}: {e}")
         return "other"

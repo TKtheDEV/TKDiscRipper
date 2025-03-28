@@ -1,0 +1,29 @@
+{% for drive in drives %}
+  <div class="drive-tile">
+    <h3>{{ drive.model }}</h3>
+    <div>
+      {% for cap in ["CD", "DVD", "BD"] %}
+        {% if cap in drive.capabilities %}
+          <span class="badge">{{ cap }}</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <code>{{ drive.path }}</code><br><br>
+
+    {% set job = job_map.get(drive.path) %}
+    {% if job %}
+      <strong>Status:</strong> {{ job.status }}<br>
+      <strong>Title:</strong> {{ job.disc_label }}<br>
+      <strong>Elapsed:</strong> {{ job.elapsed_time | round }}s<br>
+      <strong>Job:</strong> <a href="/jobs/{{ job.job_id }}">{{ job.job_id }}</a><br>
+    {% else %}
+      <em>No active job</em><br>
+    {% endif %}
+
+    <form method="post" action="/eject">
+      <input type="hidden" name="drive" value="{{ drive.path }}">
+      <button type="submit" class="eject-btn">Eject</button>
+    </form>
+  </div>
+{% endfor %}

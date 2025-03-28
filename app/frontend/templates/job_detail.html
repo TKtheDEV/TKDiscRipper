@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Job {{ job.job_id }}</title>
+  <meta http-equiv="refresh" content="3">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header class="header-bar">
+    <div class="title-left">
+      <a href="/" style="color:white;">⬅️ Back</a>
+      <h1 style="margin-left: 1rem;">Job Detail</h1>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <div class="section">
+      <h2>🆔 Job Info</h2>
+      <strong>ID:</strong> {{ job.job_id }}<br>
+      <strong>Type:</strong> {{ job.disc_type }}<br>
+      <strong>Label:</strong> {{ job.disc_label }}<br>
+      <strong>Status:</strong> {{ job.status }}<br>
+      <strong>Progress:</strong> {{ job.progress }}%<br>
+    </div>
+
+    <div class="section">
+      <h2>💽 Paths</h2>
+      <strong>Drive:</strong> {{ job.drive }}<br>
+      <strong>Temp Folder:</strong> {{ job.temp_folder }}<br>
+      <strong>Output Folder:</strong> {{ job.output_folder }}<br>
+    </div>
+
+    <div class="section">
+      <h2>⏱ Timing</h2>
+      <strong>Started:</strong> {{ job.start_time | int }}<br>
+      <strong>Ended:</strong> {{ job.end_time | int if job.end_time else "Still running" }}<br>
+      <strong>Duration:</strong> {{ job.elapsed_time | round }}s
+    </div>
+
+    <div class="section">
+        <h2>📋 Live Log</h2>
+        <div 
+          id="job-log"
+          hx-get="/partial/jobs/{{ job.job_id }}/log"
+          hx-trigger="load, every 3s"
+          hx-swap="outerHTML"
+        >
+          <pre style="white-space: pre-wrap; font-size: 0.9rem;">
+      {% for line in job.stdout_log %}
+      {{ line }}
+      {% endfor %}
+          </pre>
+        </div>
+      </div>
+
+  </main>
+
+</body>
+</html>

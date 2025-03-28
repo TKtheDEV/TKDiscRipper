@@ -11,15 +11,18 @@ class HandBrakeHelper:
 
         # ✅ Find all MKV files in the directory
         mkv_files = [f for f in os.listdir(input_dir) if f.endswith(".mkv")]
+        total = len(mkv_files)
         if not mkv_files:
             print("❌ No MKV files found for transcoding.")
             return []
 
         print(f"🎥 Found {len(mkv_files)} MKV files for transcoding.")
 
-        for mkv_file in mkv_files:
+        for idx, mkv_file in enumerate(mkv_files, start=1):
             input_path = os.path.join(input_dir, mkv_file)
             output_file = os.path.join(output_dir, mkv_file)
+
+            yield f"🎞️ Transcoding file {idx}/{total}: {mkv_file}"
 
             command = [
                 "flatpak", "run", "--command=HandBrakeCLI", "fr.handbrake.ghb",
@@ -33,6 +36,6 @@ class HandBrakeHelper:
                 output_files.append(output_file)
             except subprocess.CalledProcessError as e:
                 print(f"❌ Error transcoding {input_path}: {e}")
-                output_files.append(None)  # Mark as failed
+                output_files.append(None)
 
         return output_files

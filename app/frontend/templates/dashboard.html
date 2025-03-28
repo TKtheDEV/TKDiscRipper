@@ -31,9 +31,12 @@
     <!-- Drives Section -->
     <div class="section">
       <h2>Drives</h2>
-      <div hx-get="/partial/drives" hx-trigger="every 5s" hx-swap="outerHTML">
-        Loading drives...
-      </div>
+      <div id="drive-tiles"
+           hx-get="/partials/drives"
+           hx-trigger="load, every 5s"
+           hx-swap="innerHTML">
+        Loading drive info...
+      </div>      
     </div>
   
     <!-- Jobs Section -->
@@ -48,7 +51,16 @@
   
 
 </body>
+<script>
+  function openDrive(type) {
+    fetch(`/drives/open?disc_type=${type}`, {
+      method: "POST",
+      headers: { Authorization: "Basic " + btoa("admin:admin") }
+    })
+    .then(res => res.json())
+    .then(data => alert("Opened: " + (data.drive || data.detail)))
+    .catch(err => alert("Error: " + err));
+  }
+  </script>
+  
 </html>
-
-
-⚙️

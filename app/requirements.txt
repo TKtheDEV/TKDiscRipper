@@ -4,3 +4,4 @@ psutil
 setuptools
 requests
 jinja2
+python-multipart

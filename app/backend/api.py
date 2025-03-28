@@ -1,62 +1,72 @@
+import os
 import subprocess
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Request, Form
 from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from backend.drive_tracker import get_drive_tracker
-from backend.instance import tracker
+from backend.job_tracker import job_tracker
+from backend.utils.config_manager import get_config
 from backend.utils.get_driveinfo import get_drive_info
-from backend.utils.get_systeminfo import get_system_info
 
 router = APIRouter()
-drive_tracker = get_drive_tracker()
+templates = Jinja2Templates(directory="app/frontend/templates")
+
+# ========================
+# ==== JOB MANAGEMENT ====
+# ========================
 
 class JobRequest(BaseModel):
     drive_path: str
     disc_type: str
 
-@router.get("/drives")
-def list_drives():
-    """List available optical drives."""
-    return get_drive_info()
-
-@router.get("/system_info")
-def system_info():
-    """Retrieve system information."""
-    return get_system_info()
-
 @router.post("/jobs/create")
 def create_job(job: JobRequest):
-    """Create a new job."""
     try:
-        job_id = tracker.start_job(job.drive_path, job.disc_type)
+        job_id = job_tracker.start_job(job.drive_path, job.disc_type)
         return {"job_id": job_id, "status": "Job created"}
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
 
-@router.get("/jobs/{job_id}")
-def get_job_status(job_id: str):
-    """Retrieve job status."""
-    job = tracker.get_job_status(job_id)
-    if job:
-        return job
-    return {"error": "Job not found"}
+@router.get("/jobs/{job_id}", response_class=HTMLResponse)
+def job_detail(job_id: str, request: Request):
+    job = job_tracker.get_job_status(job_id)
+    if not job:
+        return HTMLResponse(f"<h2>Job {job_id} not found</h2>", status_code=404)
+    return templates.TemplateResponse("job_detail.html", {"request": request, "job": job})
+
+@router.patch("/jobs/{job_id}")
+def patch_job(job_id: str, payload: dict = Body(...)):
+    job = job_tracker.jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    editable_fields = [
+        "progress", "operation", "status", "log", "disc_label", "final_output",
+        "output_folder", "temp_folder", "end_time"
+    ]
+
+    updated = []
+    for key in editable_fields:
+        if key in payload:
+            if key == "log":
+                job["stdout_log"].append(str(payload["log"]))
+            else:
+                job[key] = payload[key]
+            updated.append(key)
+
+    return {"updated": updated}
 
 @router.delete("/jobs/{job_id}/cancel")
 def cancel_job(job_id: str):
-    """Cancel a running job."""
-    if tracker.cancel_job(job_id):
+    if job_tracker.cancel_job(job_id):
         return {"detail": "Job canceled"}
     raise HTTPException(status_code=400, detail="Job not found or cannot be canceled")
 
 @router.delete("/jobs/{job_id}")
 def delete_job(job_id: str):
-    """
-    Remove job metadata and optionally clean up temp folder.
-    """
-    job = tracker.jobs.get(job_id)
+    job = job_tracker.jobs.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-
     if job["status"] == "running":
         raise HTTPException(status_code=409, detail="Cannot delete a running job")
 
@@ -68,57 +78,79 @@ def delete_job(job_id: str):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to clean temp dir: {e}")
 
-    del tracker.jobs[job_id]
+    del job_tracker.jobs[job_id]
     return {"detail": f"Job {job_id} deleted."}
-
 
 @router.get("/jobs")
 def list_jobs():
-    """
-    Returns a summary of all active/running/finished jobs.
-    """
-    return list(tracker.jobs.values())
+    return list(job_tracker.jobs.values())
 
+# ========================
+# ==== DRIVE HANDLING ====
+# ========================
 
-#DRIVE SECTION
+@router.get("/drives")
+def list_drives():
+    return job_tracker.drive_manager.get_all_drives()
 
 @router.get("/drives/occupancy")
 def drive_occupancy():
-    """Show which drives are busy or free, with associated job IDs."""
-    all_drives = [d["path"] for d in get_drive_info()]
-    busy = drive_tracker.get_busy_drives()
-    free = drive_tracker.get_free_drives(all_drives)
+    drives = job_tracker.drive_manager.get_all_drives()
+    busy = {d["path"]: d["job_id"] for d in drives if d["status"] == "busy"}
+    free = [d["path"] for d in drives if d["status"] == "idle"]
     return {"busy": busy, "free": free}
-
-@router.post("/drives/reload_blacklist")
-def reload_drive_blacklist():
-    """Reload drive blacklist from the config file."""
-    drive_tracker.reload_blacklist()
-    return {"detail": "Drive blacklist reloaded"}
 
 @router.post("/drives/open")
 def open_drive(disc_type: str):
-    """
-    Ejects an available drive (by type) for the user to insert a disc.
-    Accepts: cd, dvd, bluray
-    """
-    drive = drive_tracker.find_available_drive(disc_type)
-    if not drive:
+    path = job_tracker.drive_manager.find_available_drive(disc_type)
+    if not path:
         return JSONResponse({"error": f"No available {disc_type.upper()} drive"}, status_code=404)
 
     try:
-        subprocess.run(["eject", drive], check=True)
-        return {"detail": f"Drive {drive} opened for {disc_type.upper()}", "drive": drive}
+        subprocess.run(["eject", path], check=True)
+        return {"detail": f"Drive {path} opened", "drive": path}
     except subprocess.CalledProcessError as e:
         return JSONResponse({"error": f"Failed to open drive: {str(e)}"}, status_code=500)
 
+@router.post("/drives/reload_blacklist")
+def reload_drive_blacklist():
+    job_tracker.drive_manager.reload_blacklist()
+    return {"detail": "Drive blacklist reloaded"}
 
+# future API (optional):
+@router.delete("/drives/by-job/{job_id}")
+def api_free_drive(job_id: str):
+    job_tracker.drive_manager.free_drive_by_job(job_id)
+    return {"detail": f"Freed drive for job {job_id}"}
 
+# ========================
+# ==== SYSTEM SETTINGS ===
+# ========================
 
-#Frontend
-# -------------------------------------------------------------------
-# SYSTEM INFO PARTIAL
-# -------------------------------------------------------------------
+@router.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request):
+    config = get_config()
+    return templates.TemplateResponse("settings.html", {"request": request, "config": config})
+
+@router.post("/settings")
+def update_setting(section: str = Form(...), key: str = Form(...), value: str = Form(...)):
+    config = get_config()
+    if not config.has_section(section):
+        raise HTTPException(400, detail="Invalid section")
+    config.set(section, key, value)
+    with open("config/TKDiscRipper.conf", "w") as f:
+        config.write(f)
+    return HTMLResponse(f"""
+        <div class='toast'>✅ {section}.{key} updated.</div>
+        <script>setTimeout(() => document.querySelector('.toast')?.remove(), 4000);</script>
+    """)
+
+# ========================
+# ==== PARTIALS / HTMX ===
+# ========================
+
+from backend.utils.get_systeminfo import get_system_info
+
 @router.get("/partial/system", response_class=HTMLResponse)
 def partial_system():
     info = get_system_info()
@@ -203,30 +235,70 @@ def partial_system():
 # -------------------------------------------------------------------
 # DRIVES PARTIAL
 # -------------------------------------------------------------------
-@router.get("/partial/drives", response_class=HTMLResponse)
-def partial_drives():
-    drives = get_drive_info()
-    html = '<div class="tile" hx-get="/partial/drives" hx-trigger="every 5s" hx-swap="outerHTML">'
-    html += '<h2>💿 Drives</h2>'
-    html += '''
-      <button onclick="openDrive('dvd')">🟢 Open drive for DVD</button>
-      <button onclick="openDrive('bd')">🔵 Open drive for Blu-ray</button>
-      <ul>
-    '''
+@router.get("/partials/drives", response_class=HTMLResponse)
+def drive_tiles(request: Request):
+    drives = job_tracker.drive_manager.get_all_drives()
+    job_map = {}
     for d in drives:
-        job_link = f'<a href="/jobs/{d["job_id"]}">Job {d["job_id"]}</a>' if d.get("job_id") else ""
-        html += f'''
-        <li>{d["path"]} — {d["model"]} ({d["capability"]}) — {d["status"]} {job_link}</li>
-        '''
-    html += '</ul></div>'
+        if d["status"] == "busy" and d["job_id"]:
+            job = job_tracker.get_job_status(d["job_id"])
+            if job:
+                job_map[d["path"]] = job
+
+    return templates.TemplateResponse("partials_drives.html", {
+        "request": request,
+        "drives": drives,
+        "job_map": job_map,
+    })
+
+'''
+    html = """
+    <div class="tile-row" hx-get="/partials/drives" hx-trigger="every 5s" hx-swap="outerHTML">
+    """
+
+    # Availability Overview Tile
+    html += f"""
+    <div class="tile">
+      <h2>📊 Drive Availability</h2>
+      <table style="font-size: 0.9rem; width: 100%; margin-bottom: 0.5rem;">
+        <tr><th></th><th>CD</th><th>DVD</th><th>BluRay</th></tr>
+        <tr>
+          <td>In Use / Total</td>
+          <td>{count['cd']['in_use']} / {count['cd']['total']}</td>
+          <td>{count['dvd']['in_use']} / {count['dvd']['total']}</td>
+          <td>{count['bd']['in_use']} / {count['bd']['total']}</td>
+        </tr>
+      </table>
+      <b>I want to rip...</b><br>
+      <button class="drive-control green" onclick="openDrive('cd')">CD</button>
+      <button class="drive-control blue" onclick="openDrive('dvd')">DVD</button>
+      <button class="drive-control dark" onclick="openDrive('bd')">Blu-ray</button>
+    </div>
+    """
+
+    # Individual Drive Tiles
+    for d in drives:
+        job_link = f'<br><small>Job: <a href="/jobs/{d["job_id"]}">{d["job_id"]}</a></small>' if d.get("job_id") else ""
+        caps = ", ".join(d.get("capabilities", []))
+        html += f"""
+        <div class="tile">
+          <strong title="{d['model']}">{d['model']}</strong>
+          Path: {d['path']}<br>
+          Capabilities: {caps}<br>
+          Status: {d['status']}{job_link}
+        </div>
+        """
+
+    html += "</div>"
     return HTMLResponse(content=html)
+'''
 
 # -------------------------------------------------------------------
 # JOBS PARTIAL
 # -------------------------------------------------------------------
 @router.get("/partial/jobs", response_class=HTMLResponse)
 def partial_jobs():
-    jobs = list(tracker.jobs.values())
+    jobs = list(job_tracker.jobs.values())
 
     html = '<div class="tile" hx-get="/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">'
     html += '<h2>📝 Jobs</h2>'
@@ -241,8 +313,8 @@ def partial_jobs():
             <div class="job-card running">
               <strong>{job['disc_label']}</strong><br>
               Progress: {job['progress']}%<br>
-              Status: {job['status']}<br>
-              <small>Job ID: {job['job_id']}</small><br>
+              Operation: {job['operation']}<br>
+              <small>Job ID: <a href="/jobs/{job["job_id"]}">{job["job_id"]}</a></small><br>
               <form method="post" action="/api/jobs/{job['job_id']}/cancel">
                 <button>Cancel</button>
               </form>
@@ -257,7 +329,7 @@ def partial_jobs():
               <strong>{job['disc_label']}</strong><br>
               Status: {job['status']}<br>
               Progress: {job['progress']}%<br>
-              <small>Job ID: {job['job_id']}</small><br>
+              <small>Job ID: <a href="/jobs/{job["job_id"]}">{job["job_id"]}</a></small><br>
               <form method="post" action="/api/jobs/{job['job_id']}?_method=DELETE">
                 <button>Delete</button>
               </form>
@@ -266,3 +338,17 @@ def partial_jobs():
 
     html += '</div>'
     return HTMLResponse(content=html)
+
+
+@router.get("/partial/jobs/{job_id}/log", response_class=HTMLResponse)
+def job_log_partial(job_id: str):
+    job = job_tracker.get_job_status(job_id)
+    if not job:
+        return HTMLResponse("❌ Job not found", status_code=404)
+
+    log_html = "<pre style='white-space: pre-wrap; font-size: 0.9rem;'>\n"
+    for line in job["stdout_log"]:
+        log_html += line + "\n"
+    log_html += "</pre>"
+
+    return HTMLResponse(log_html)

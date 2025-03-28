@@ -1,0 +1,24 @@
+import os
+from backend.rippers.base import BaseRipper
+from backend.utils.abcde_int import run_abcde
+from backend.utils.config_manager import get_config
+
+class CdRipper(BaseRipper):
+    def __init__(self, job_id: str, drive_path: str):
+        super().__init__(job_id, drive_path)
+        config = get_config()
+        self.output_format = config.get("CD", "outputformat", fallback="flac")
+        self.config_path = os.path.expanduser(config.get("CD", "configpath", fallback="~/TKDiscRipper/config/abcde.conf"))
+        self.additional_args = [config.get("CD", "additionaloptions", fallback="")]
+
+    def rip(self):
+        yield f"🎵 Starting CD rip for job {self.job_id} on {self.drive_path}"
+        yield f"📁 Disc Label: {self.disc_label}"
+        yield "📀 Running abcde..."
+
+        success = run_abcde(self.drive_path, self.config_path, self.output_format, self.additional_args)
+
+        if success:
+            yield "✅ Audio CD ripped successfully."
+        else:
+            yield "❌ Audio CD rip failed."
