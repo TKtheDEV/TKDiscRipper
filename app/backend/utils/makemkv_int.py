@@ -4,24 +4,12 @@ from typing import List, Optional
 
 class MakeMKVHelper:
     """Helper class for handling Blu-ray ripping using MakeMKV."""
-
     @staticmethod
-    def list_drives() -> List[str]:
-        """Lists available Blu-ray drives using MakeMKV."""
-        try:
-            result = subprocess.run(["makemkvcon", "-r", "info"], capture_output=True, text=True, check=True)
-            drives = re.findall(r"DRV:\d+,(.*?),", result.stdout)
-            return drives
-        except subprocess.CalledProcessError as e:
-            print(f"Error listing drives: {e}")
-            return []
-
-    @staticmethod
-    def rip_disc(drive_index: int, output_dir: str) -> bool:
+    def rip_disc(drive_path: str, output_dir: str) -> Optional[str]:
         """Rips a Blu-ray disc from the specified drive to MKV format."""
 
         try:
-            command = ["makemkvcon", "--robot", "mkv", f"dev:{drive_index}", "all", output_dir, "--noscan", "--decrypt", "--minlength=1"]
+            command = ["makemkvcon", "--robot", "mkv", f"dev:{drive_path}", "all", output_dir, "--noscan", "--decrypt", "--minlength=1"]
             process = subprocess.run(command, capture_output=True, text=True, check=True)
             print(process.stdout)
 
@@ -34,7 +22,7 @@ class MakeMKVHelper:
             print("❌ MakeMKV did not return a valid output path.")
             return None
         except subprocess.CalledProcessError as e:
-            print(f"❌ Error ripping Blu-ray: {e}")
+            print(f"❌ Error ripping Disc: {e}")
             return None
 
 if __name__ == "__main__":
