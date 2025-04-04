@@ -310,8 +310,9 @@ def partial_jobs():
     html = '<div class="tile" hx-get="/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">'
     html += '<h2>📝 Jobs</h2>'
 
-    running = [j for j in jobs if j["status"] == "running"]
-    finished = [j for j in jobs if j["status"] != "running"]
+    running = [j for j in jobs if j["operation"] != "complete" or j["operation"] != "failed"]
+    finished = [j for j in jobs if j["operation"] == "complete"]
+    failed = [j for j in jobs if j["operation"] == "failed"]
 
     if running:
         html += "<h3>▶️ Running</h3>"
@@ -322,7 +323,7 @@ def partial_jobs():
               Progress: {job['progress']}%<br>
               Operation: {job['operation']}<br>
               <small>Job ID: <a href="/jobs/{job["job_id"]}">{job["job_id"]}</a></small><br>
-              <form method="post" action="/api/jobs/{job['job_id']}/cancel">
+              <form method="post" action="/jobs/{job['job_id']}/cancel">
                 <button>Cancel</button>
               </form>
             </div>
@@ -337,7 +338,24 @@ def partial_jobs():
               Status: {job['status']}<br>
               Progress: {job['progress']}%<br>
               <small>Job ID: <a href="/jobs/{job["job_id"]}">{job["job_id"]}</a></small><br>
-              <form method="post" action="/api/jobs/{job['job_id']}?_method=DELETE">
+              <form method="post" action="/jobs/{job['job_id']}?_method=DELETE">
+                <button>Delete</button>
+              </form>
+            </div>
+            '''
+
+    html += '</div>'
+
+    if failed:
+        html += "<h3>❌ Failed</h3>"
+        for job in failed:
+            html += f'''
+            <div class="job-card failed">
+              <strong>{job['disc_label']}</strong><br>
+              Status: {job['status']}<br>
+              Progress: {job['progress']}%<br>
+              <small>Job ID: <a href="/jobs/{job["job_id"]}">{job["job_id"]}</a></small><br>
+              <form method="post" action="/jobs/{job['job_id']}?_method=DELETE">
                 <button>Delete</button>
               </form>
             </div>
