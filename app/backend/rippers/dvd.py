@@ -33,7 +33,7 @@ class DvdRipper(BaseRipper):
         update_job(self.job_id, operation="Ripping Disc", status="Finished ripping the disc", progress=50)
 
         if not makemkv_result:
-            update_job(self.job_id, log="❌ MakeMKV failed", progress=100, status="failed")
+            update_job(self.job_id, log="❌ MakeMKV failed", progress=100, operation="failed")
             yield "❌ MakeMKV failed"
             return
 

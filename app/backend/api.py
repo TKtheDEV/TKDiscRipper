@@ -344,8 +344,6 @@ def partial_jobs():
             </div>
             '''
 
-    html += '</div>'
-
     if failed:
         html += "<h3>❌ Failed</h3>"
         for job in failed:
