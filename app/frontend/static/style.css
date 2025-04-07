@@ -203,3 +203,27 @@ body {
     100% { opacity: 0; transform: translateY(-10px); }
   }
   
+
+  .progress-bar {
+    background: #eee;
+    height: 18px;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: #3b82f6; /* blue */
+    transition: width 0.3s ease;
+  }
+  
+  .progress-bar.total .progress-fill {
+    background: #22c55e; /* green */
+  }
+  
+
+  .htmx-request .progress-bar {
+    opacity: 0.6;
+  }
+  

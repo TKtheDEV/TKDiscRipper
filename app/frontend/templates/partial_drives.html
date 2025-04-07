@@ -1,0 +1,28 @@
+<div class="drive-row">
+    {% for drive in drives %}
+      <div class="drive-tile">
+        <h2>{{ drive.model }}</h2>
+        <code>{{ drive.path }}</code><br>
+        <strong>Type:</strong> {{ drive.capability }}<br>
+        <strong>Status:</strong> {{ drive.status }}<br>
+  
+        {% if drive.status == "idle" %}
+          <form method="post" action="/drives/open" hx-post="/drives/open" hx-target="body" hx-swap="none">
+            <input type="hidden" name="disc_type" value="{{ drive.capability | lower }}">
+            <button type="submit" class="drive-control green">Start Job</button>
+          </form>
+        {% elif drive.status == "busy" %}
+          <strong>Job:</strong>
+          <a href="/jobs/{{ drive.job_id }}">{{ drive.job_id }}</a><br>
+        {% elif drive.status == "blacklisted" %}
+          <span class="badge">🚫 Blacklisted</span><br>
+        {% endif %}
+  
+        <form method="post" action="/eject" hx-post="/eject" hx-target="body" hx-swap="none">
+          <input type="hidden" name="drive" value="{{ drive.path }}">
+          <button type="submit" class="drive-control dark">Eject</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+  

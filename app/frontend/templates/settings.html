@@ -5,52 +5,44 @@
   <title>Settings</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.5"></script>
+  <link rel="icon" type="image/gif" href="/static/favicon.gif">
 </head>
 <body>
-    <div id="toast" style="
-        position: fixed;
-        top: 1rem;
-        right: 1rem;
-        z-index: 9999;   /* 👈 Bump this above header */
-        pointer-events: none; /* So it doesn't block inputs */
-    "></div>
-    
-<header class="header-bar">
-  <div class="title-left">
-    <a href="/" style="color:white;">⬅️ Back</a>
-    <h1 style="margin-left: 1rem;">Settings</h1>
-  </div>
-</header>
+  <div id="toast" style="position: fixed; top: 1rem; right: 1rem; z-index: 9999; pointer-events: none;"></div>
 
-<main class="content">
-
-  {% for section in config.sections() %}
-    <div class="section">
-      <h2>[{{ section }}]</h2>
-      {% for key, val in config.items(section) %}
-        <form 
-          method="post" 
-          hx-post="/settings" 
-          hx-target="#toast" 
-          hx-swap="innerHTML" 
-          style="margin-bottom: 0.75rem;"
-        >
-          <input type="hidden" name="section" value="{{ section }}">
-          <input type="hidden" name="key" value="{{ key }}">
-          <label style="font-weight: 600;">{{ key }}</label><br>
-          <input 
-            type="text" 
-            name="value" 
-            value="{{ val }}" 
-            style="width: 300px; margin-right: 0.5rem;"
-          >
-          <button type="submit">Save</button>
-        </form>
-      {% endfor %}
+  <header class="header-bar">
+    <div class="title-left">
+      <a href="/" style="color:white;">⬅️ Back</a>
+      <h1 style="margin-left: 1rem;">Settings</h1>
     </div>
-  {% endfor %}
+  </header>
 
-</main>
-
+  <main class="content">
+    {% for section in config.sections() %}
+      <div class="section">
+        <h2>[{{ section }}]</h2>
+        {% for key, val in config.items(section) %}
+          <form 
+            method="post"
+            hx-post="/settings"
+            hx-target="#toast"
+            hx-swap="innerHTML"
+            style="margin-bottom: 0.75rem;"
+          >
+            <input type="hidden" name="section" value="{{ section }}">
+            <input type="hidden" name="key" value="{{ key }}">
+            <label style="font-weight: 600;">{{ key }}</label><br>
+            <input 
+              type="text"
+              name="value"
+              value="{{ val }}"
+              style="width: 300px; margin-right: 0.5rem;"
+            >
+            <button type="submit">Save</button>
+          </form>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </main>
 </body>
 </html>

@@ -8,7 +8,6 @@
   <link rel="icon" type="image/gif" href="/static/favicon.gif">
 </head>
 <body>
-
   <header class="header-bar">
     <div class="title-left">
       <span class="icon">📀</span>
@@ -21,47 +20,41 @@
 
   <main class="content">
 
-    <!-- System Info Section -->
+    <!-- System Info -->
     <div class="section">
       <h2>System Information</h2>
       <div class="tile-row" hx-get="/partial/system" hx-trigger="every 5s" hx-swap="outerHTML">
         Loading system info...
       </div>
     </div>
-  
-    <!-- Drives Section -->
+
+    <!-- Drives -->
     <div class="section">
       <h2>Drives</h2>
-      <div id="drive-tiles"
-           hx-get="/partials/drives"
-           hx-trigger="load, every 5s"
-           hx-swap="innerHTML">
+      <div id="drive-tiles" hx-get="/partial/drives" hx-trigger="load, every 5s" hx-swap="innerHTML">
         Loading drive info...
-      </div>      
+      </div>
     </div>
-  
-    <!-- Jobs Section -->
+
+    <!-- Jobs -->
     <div class="section">
       <h2>Jobs</h2>
       <div hx-get="/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">
         Loading jobs...
       </div>
     </div>
-  
   </main>
-  
 
-</body>
-<script>
-  function openDrive(type) {
-    fetch(`/drives/open?disc_type=${type}`, {
-      method: "POST",
-      headers: { Authorization: "Basic " + btoa("admin:admin") }
-    })
-    .then(res => res.json())
-    .then(data => alert("Opened: " + (data.drive || data.detail)))
-    .catch(err => alert("Error: " + err));
-  }
+  <script>
+    function openDrive(type) {
+      fetch(`/drives/open?disc_type=${type}`, {
+        method: "POST",
+        headers: { Authorization: "Basic " + btoa("admin:admin") }
+      })
+      .then(res => res.json())
+      .then(data => alert("Opened: " + (data.drive || data.detail)))
+      .catch(err => alert("Error: " + err));
+    }
   </script>
-  
+</body>
 </html>
