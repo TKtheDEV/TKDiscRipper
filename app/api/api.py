@@ -1,6 +1,6 @@
 import logging
 from fastapi import APIRouter, Request, Depends, Form, Body
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from app.core.job.tracker import job_tracker
 from app.core.config import get_config, set_config
 from app.core.drive.manager import drive_manager
@@ -64,7 +64,8 @@ def update_setting(
     value: str = Form(...)
 ):
     set_config(section=section, option=key, value=value)
-    return "<div class='toast'>✅ Setting updated!</div>"
+    return HTMLResponse(content="<div class='toast'>✅ Setting updated!</div>")
+
 
 @router.post("/jobs/create")
 def create_job_from_api(payload: dict = Body(...)):

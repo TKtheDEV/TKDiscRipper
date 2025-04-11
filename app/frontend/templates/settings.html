@@ -6,6 +6,52 @@
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.5"></script>
   <link rel="icon" type="image/gif" href="/static/favicon.gif">
+  <style>
+    /* Toggle Switch (can be moved to style.css if you want) */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+      margin-left: 10px;
+    }
+
+    .switch input {
+      display: none;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.4s;
+      border-radius: 24px;
+    }
+
+    .slider::before {
+      content: "";
+      position: absolute;
+      height: 20px;
+      width: 20px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #4caf50;
+    }
+
+    input:checked + .slider::before {
+      transform: translateX(26px);
+    }
+  </style>
 </head>
 <body>
   <div id="toast" style="position: fixed; top: 1rem; right: 1rem; z-index: 9999; pointer-events: none;"></div>
@@ -32,13 +78,30 @@
             <input type="hidden" name="section" value="{{ section }}">
             <input type="hidden" name="key" value="{{ key }}">
             <label style="font-weight: 600;">{{ key }}</label><br>
-            <input 
-              type="text"
-              name="value"
-              value="{{ val }}"
-              style="width: 300px; margin-right: 0.5rem;"
-            >
-            <button type="submit">Save</button>
+
+            {% if val.lower() in ["true", "false"] %}
+              <input type="hidden" name="value" value="{{ 'false' if val.lower() == 'true' else 'true' }}">
+              <label class="switch">
+                <input 
+                  type="checkbox"
+                  name="bool_toggle"
+                  {% if val.lower() == "true" %}checked{% endif %}
+                  hx-post="/settings"
+                  hx-vals='{"section": "{{ section }}", "key": "{{ key }}", "value": "{{ 'false' if val.lower() == 'true' else 'true' }}"}'
+                  hx-target="#toast"
+                  hx-swap="innerHTML"
+                >
+                <span class="slider"></span>
+              </label>
+            {% else %}
+              <input 
+                type="text"
+                name="value"
+                value="{{ val }}"
+                style="width: 300px; margin-right: 0.5rem;"
+              >
+              <button type="submit">Save</button>
+            {% endif %}
           </form>
         {% endfor %}
       </div>
