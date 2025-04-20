@@ -13,6 +13,7 @@ def run_abcde(
         "-d", drive_path,
         "-o", output_format,
         "-c", config_path,
+        "-N",
         *additional_args
     ]
 

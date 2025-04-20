@@ -1,16 +1,17 @@
 from app.core.job.context import JobContext
 from app.core.integration.abcde import run_abcde
 from app.core.config import get_config
+import os
 
 class AudioRipper:
     def __init__(self, job_id: str, drive_path: str):
         self.job_id = job_id
         self.drive_path = drive_path
         self.ctx = JobContext(job_id)
-
+        self.disc_label = "Disc name not available"
         config = get_config()
         self.output_format = config.get("CD", "outputformat", fallback="flac")
-        self.config_path = config.get("CD", "configpath", fallback="~/TKDiscRipper/config/abcde.conf")
+        self.config_path = os.path.expanduser(config.get("CD", "configpath", fallback="~/TKDiscRipper/config/abcde.conf"))
         self.additional_args = config.get("CD", "additionaloptions", fallback="").split()
 
     def rip(self):
