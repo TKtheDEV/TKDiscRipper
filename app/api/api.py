@@ -55,7 +55,13 @@ def eject_drive(drive: str = Form(...)):
 @router.get("/settings")
 def get_settings(request: Request):
     config = get_config()
-    return templates.TemplateResponse("settings.html", {"request": request, "config": config})
+    descriptions = get_descriptions()
+    return templates.TemplateResponse("settings.html", {
+        "request": request,
+        "config": config,
+        "descriptions": descriptions,
+        "get_description": get_description,
+    })
 
 @router.post("/settings")
 def update_setting(
@@ -65,7 +71,6 @@ def update_setting(
 ):
     set_config(section=section, option=key, value=value)
     return HTMLResponse(content="<div class='toast'>✅ Setting updated!</div>")
-
 
 @router.post("/jobs/create")
 def create_job_from_api(payload: dict = Body(...)):

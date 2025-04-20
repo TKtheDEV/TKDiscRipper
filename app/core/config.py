@@ -1,7 +1,19 @@
 import configparser
 import os
+import yaml
 
 DEFAULT_CONFIG_PATH = "config/TKDiscRipper.conf"
+DESC_PATH = "config/settings_desc.yaml"
+
+def get_descriptions(desc_file=DESC_PATH):
+    if not os.path.exists(desc_file):
+        return {}
+    with open(desc_file, "r") as f:
+        return yaml.safe_load(f) or {}
+
+def get_description(section, key, descs=None):
+    descs = descs or get_descriptions()
+    return descs.get(section, {}).get(key, "")
 
 def get_config(config_file=DEFAULT_CONFIG_PATH) -> configparser.ConfigParser:
     if not os.path.exists(config_file):

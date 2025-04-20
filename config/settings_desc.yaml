@@ -1,0 +1,12 @@
+General:
+  outputdirectory: "Default output directory for all rips"
+  tempdirectory: "Temporary working directory for jobs"
+
+DVD:
+  usehandbrake: "Enable HandBrake for DVD encoding"
+  handbrakeformat: "Container format (e.g., mkv, mp4)"
+  handbrakepreset: "Path to your HandBrake JSON preset"
+
+auth:
+  username: "Login username"
+  password: "Login password"
