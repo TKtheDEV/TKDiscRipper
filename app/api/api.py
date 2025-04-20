@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, Request, Depends, Form, Body
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from app.core.job.tracker import job_tracker
-from app.core.config import get_config, set_config
+from app.core.config import get_config, set_config, get_description, get_descriptions
 from app.core.drive.manager import drive_manager
 from app.core.templates import templates
 
