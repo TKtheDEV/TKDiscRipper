@@ -5,7 +5,8 @@ from typing import Callable, Optional
 from app.core.job.context import JobContext
 
 class HandBrake:
-    def __init__(self, preset_file: str):
+    def __init__(self, preset_name: str, preset_file: Optional[str] = None):
+        self.preset_name = preset_name
         self.preset_file = preset_file
 
     def transcode(
@@ -14,9 +15,6 @@ class HandBrake:
         output_dir: str,
         ctx: JobContext,
     ) -> bool:
-        if not self.preset_file or not os.path.isfile(self.preset_file):
-            ctx.log(f"❌ HandBrake preset not found: {self.preset_file}")
-            return False
 
         total_tracks = len(mkv_files)
         if total_tracks == 0:
@@ -28,14 +26,19 @@ class HandBrake:
         for idx, mkv_file in enumerate(mkv_files, start=1):
             track_basename = os.path.basename(mkv_file)
             output_path = os.path.join(output_dir, track_basename)
+            presetfilecmd = ""
+            if self.preset_file:
+                presetfilecmd=("--preset-import-file", self.preset_file,)
 
             ctx.log(f"🎞️ Transcoding file {idx}/{total_tracks}: {track_basename}")
             ctx.log(f"🚀 {mkv_file} → {output_path}")
 
             command = [
-                "flatpak", "run", "--command=sh", "fr.handbrake.ghb",
-                "-c",
-                f'HandBrakeCLI -i "{mkv_file}" -o "{output_path}" --preset-import-file "{self.preset_file}" -Z "AV1_v3"'
+                "flatpak", "run", "--command=HandBrakeCLI", "fr.handbrake.ghb",
+                presetfilecmd,
+                "-Z", self.preset_name,
+                "-i", mkv_file,
+                "-o", output_path
             ]
 
             try:

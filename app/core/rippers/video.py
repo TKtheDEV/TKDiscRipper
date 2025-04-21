@@ -19,7 +19,8 @@ class VideoRipper:
         self.base_temp = os.path.expanduser(config.get("General", "tempdirectory"))
         self.base_output = os.path.expanduser(config.get(self.config_section, "outputdirectory"))
         self.handbrake_enabled = config.get(self.config_section, "usehandbrake", fallback="true").lower() == "true"
-        self.handbrake_preset = os.path.expanduser(config.get(self.config_section, "handbrakepreset"))
+        self.handbrake_preset_name = os.path.expanduser(config.get(self.config_section, "handbrakepreset_name"))
+        self.handbrake_preset_path = os.path.expanduser(config.get(self.config_section, "handbrakepreset_path"))
         self.handbrake_format = config.get(self.config_section, "handbrakeformat", fallback="mkv")
 
         self.temp_dir = None
@@ -62,7 +63,7 @@ class VideoRipper:
         if self.handbrake_enabled:
             yield "🎞️ Starting HandBrake..."
             self.ctx.set_progress(operation="Transcoding", status="Using HandBrake", progress=55)
-            hb = HandBrake(self.handbrake_preset)
+            hb = HandBrake(self.handbrake_preset_name, self.handbrake_preset_path)
             if hb.transcode(mkvs, self.output_dir, self.ctx):
                 yield f"✅ Transcoding complete. Files in: {self.output_dir}"
                 self.ctx.set_progress(operation="complete", status="Done", progress=100)
