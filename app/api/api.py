@@ -5,6 +5,7 @@ from app.core.job.tracker import job_tracker
 from app.core.config import get_config, set_config, get_description, get_descriptions
 from app.core.drive.manager import drive_manager
 from app.core.templates import templates
+from app.core.os.systeminfo import SystemInfo
 
 router = APIRouter()
 
@@ -22,11 +23,18 @@ def job_progress_partial(job_id: str, request: Request):
     job = job_tracker.get_job_status(job_id)
     return templates.TemplateResponse("partial_job_progress.html", {"request": request, "job": job})
 
+@router.get("/api/system-info")
+def get_system_info():
+    info = SystemInfo().get_system_info()
+    return info
+
+'''
 @router.get("/partial/system")
 def system_info_partial(request: Request):
     from app.core.os.linux_systeminfo import LinuxSystemInfo
     info = LinuxSystemInfo().get_system_info()
     return templates.TemplateResponse("partial_system.html", {"request": request, "system": info})
+'''
 
 @router.get("/partial/jobs")
 def jobs_partial(request: Request):

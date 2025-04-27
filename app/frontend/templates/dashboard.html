@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>TKDiscRipper Dashboard</title>
   <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/htmx.min.js"></script>
   <link rel="icon" type="image/gif" href="/static/favicon.gif">
+  <script>document.documentElement.classList.add('dark-mode');</script>
 </head>
 <body>
   <header class="header-bar">
@@ -14,47 +14,187 @@
       <h1>TKDiscRipper Dashboard</h1>
     </div>
     <div class="title-right">
+      <span id="theme-icon" class="theme-symbol" onclick="toggleTheme()">☀️</span>
       <a href="/settings" title="Settings">⚙️</a>
-    </div>
+    </div>    
   </header>
 
   <main class="content">
-
-    <!-- System Info -->
-    <div class="section">
-      <h2>System Information</h2>
-      <div class="tile-row" hx-get="/partial/system" hx-trigger="every 5s" hx-swap="outerHTML">
-        Loading system info...
+    <h2>System Information</h2>
+    <div class="tile-row" id="system-info">
+      <!-- Static Tiles -->
+      <div class="tile" id="os_info">
+        <h3>OS Info</h3>
+        <div class="entry"><strong>OS:</strong> <span id="os">loading...</span></div>
+        <div class="entry"><strong>Version:</strong> <span id="os_version">loading...</span></div>
+        <div class="entry"><strong>Kernel:</strong> <span id="kernel">loading...</span></div>
+        <div class="entry"><strong>Uptime:</strong> <span id="uptime">loading...</span></div>
       </div>
+
+      <div class="tile" id="hwenc_info">
+        <h3>Hardware Encoders</h3>
+        <div class="entry"><strong>AMD VCE:</strong> <span id="amd_vce">loading...</span></div>
+        <div class="entry"><strong>Intel QSV:</strong> <span id="intel_qsv">loading...</span></div>
+        <div class="entry"><strong>nVidia NVENC:</strong> <span id="nvidia_nvenc">loading...</span></div>
+      </div>
+
+      <div class="tile" id="ram_info">
+        <h3>RAM Info</h3>
+        <div class="entry"><strong>Total:</strong> <span id="ram_total">loading...</span></div>
+        <div class="entry"><strong>Used:</strong> <span id="ram_used">loading...</span></div>
+        <div class="entry"><strong>Usage:</strong> <span id="ram_usage">loading...</span></div>
+      </div>
+
+      <div class="tile" id="storage_info">
+        <h3>Storage Info</h3>
+        <div class="entry"><strong>Total:</strong> <span id="disk_total">loading...</span></div>
+        <div class="entry"><strong>Used:</strong> <span id="disk_used">loading...</span></div>
+        <div class="entry"><strong>Usage:</strong> <span id="disk_usage">loading...</span></div>
+      </div>
+
+      <div class="tile" id="cpu_info">
+        <h3>CPU Info</h3>
+        <div class="entry"><strong id="cpu_model">loading...</strong></div>
+        <div class="entry"><strong>Cores/Threads:</strong> <span id="cpu_cores_threads">loading...</span></div>
+        <div class="entry"><strong>Clock:</strong> <span id="cpu_clock">loading...</span></div>
+        <div class="entry"><strong>Usage:</strong> <span id="cpu_usage">loading...</span></div>
+        <div class="entry"><strong>Temp:</strong> <span id="cpu_temp">loading...</span></div>
+      </div>
+
+      <!-- GPU Tiles will be inserted dynamically -->
     </div>
 
-    <!-- Drives -->
-    <div class="section">
-      <h2>Drives</h2>
-      <div id="drive-tiles" hx-get="/partial/drives" hx-trigger="load, every 5s" hx-swap="innerHTML">
-        Loading drive info...
-      </div>
-    </div>
+    <hr>
 
-    <!-- Jobs -->
-    <div class="section">
-      <h2>Jobs</h2>
-      <div hx-get="/partial/jobs" hx-trigger="every 5s" hx-swap="outerHTML">
-        Loading jobs...
-      </div>
-    </div>
+    <h2>Drive Status</h2>
+    <div id="drives" hx-get="/drives" hx-trigger="load, every 10s" hx-swap="outerHTML"></div>
+
+    <h2>Job Status</h2>
+    <div id="jobs" hx-get="/jobs" hx-trigger="load, every 10s" hx-swap="outerHTML"></div>
+
   </main>
 
   <script>
-    function openDrive(type) {
-      fetch(`/drives/open?disc_type=${type}`, {
-        method: "POST",
-        headers: { Authorization: "Basic " + btoa("admin:admin") }
-      })
-      .then(res => res.json())
-      .then(data => alert("Opened: " + (data.drive || data.detail)))
-      .catch(err => alert("Error: " + err));
+    function safeUpdate(id, value) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = value ?? "loading...";
+      }
     }
+
+    function updateSystemInfo() {
+      fetch("/api/system-info")
+        .then(res => res.json())
+        .then(data => {
+          if (!data) return;
+
+          // Static info updates
+          safeUpdate('os', data.os_info.os);
+          safeUpdate('os_version', data.os_info.os_version);
+          safeUpdate('kernel', data.os_info.kernel);
+          safeUpdate('uptime', data.os_info.uptime);
+
+          safeUpdate('ram_total', Math.round(data.memory_info.total / 1048576) + " MB");
+          safeUpdate('ram_used', Math.round(data.memory_info.used / 1048576) + " MB");
+          safeUpdate('ram_usage', data.memory_info.percent + "%");
+
+          safeUpdate('disk_total', (data.storage_info.total / 1073741824).toFixed(1) + " GB");
+          safeUpdate('disk_used', (data.storage_info.used / 1073741824).toFixed(1) + " GB");
+          safeUpdate('disk_usage', data.storage_info.percent + "%");
+
+          safeUpdate('cpu_model', data.cpu_info.model);
+          safeUpdate('cpu_cores_threads', `${data.cpu_info.cores}C / ${data.cpu_info.threads}T`);
+          safeUpdate('cpu_clock', data.cpu_info.frequency + " MHz");
+          safeUpdate('cpu_usage', data.cpu_info.usage + "%");
+          safeUpdate('cpu_temp', data.cpu_info.temperature + "°C");
+
+          // HW Encoder Info
+          const hwencoders = [
+            { id: 'amd_vce', vendor: 'vce' },
+            { id: 'intel_qsv', vendor: 'qsv' },
+            { id: 'nvidia_nvenc', vendor: 'nvenc' },
+          ];
+
+          hwencoders.forEach(enc => {
+            const vendorInfo = data.hwenc_info?.vendors?.[enc.vendor];
+            const el = document.getElementById(enc.id);
+            if (vendorInfo?.available) {
+              if (vendorInfo.codecs?.length) {
+                el.innerHTML = "✓<br>(" + vendorInfo.codecs.join(", ") + ")";
+              } else {
+                el.textContent = "✓";
+              }
+            } else {
+              el.textContent = "✗";
+            }
+          });
+
+          // GPU Tiles
+          const systemInfoRow = document.getElementById('system-info');
+          systemInfoRow.querySelectorAll('.gpu-tile').forEach(tile => tile.remove());
+
+          if (data.gpu_info.length > 0) {
+            data.gpu_info.forEach(gpu => {
+              const gpuTile = document.createElement('div');
+              gpuTile.classList.add('tile', 'gpu-tile');
+              gpuTile.innerHTML = `
+                <h3>GPU Info</h3>
+                <div class="entry"><strong>${gpu.model}</strong></div>
+                <div class="entry"><strong>Usage:</strong> ${gpu.usuage}%</div>
+                <div class="entry"><strong>Temp:</strong> ${gpu.temperature}°C</div>
+                <div class="entry"><strong>VRAM:</strong> ${Math.round(gpu.used_memory/1048576)}MB / ${Math.round(gpu.total_memory/1048576)}MB (${gpu.percent_memory}%)</div>
+              `;
+              systemInfoRow.appendChild(gpuTile);
+            });
+          }
+        });
+    }
+
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      return match ? decodeURIComponent(match[2]) : null;
+    }
+
+    function setCookie(name, value, days = 365) {
+      const expires = new Date(Date.now() + days * 864e5).toUTCString();
+      document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+    }
+
+    function toggleTheme() {
+      const current = getCookie('theme') || 'light';
+      const next = current === 'light' ? 'dark' : 'light';
+      applyTheme(next);
+    }
+
+    function applyTheme(mode) {
+      const body = document.body;
+      const icon = document.getElementById('theme-icon');
+
+      body.classList.remove('dark-mode', 'light-mode');
+
+      if (mode === 'dark') {
+        body.classList.add('dark-mode');
+        icon.textContent = '🌙';
+      } else {
+        body.classList.add('light-mode');
+        icon.textContent = '☀️';
+      }
+
+      setCookie('theme', mode);
+    }
+
+    // On page load
+    document.addEventListener('DOMContentLoaded', () => {
+      let mode = getCookie('theme');
+      if (!mode) {
+        mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      applyTheme(mode);
+    });
+
+
+    setInterval(updateSystemInfo, 5000);
+    updateSystemInfo();
   </script>
 </body>
 </html>

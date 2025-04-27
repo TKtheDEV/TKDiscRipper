@@ -1,273 +1,148 @@
 /* ==== Base Styles ==== */
 body {
-    font-family: sans-serif;
-    background-color: #f5f7fa;
-    color: #333;
-    margin: 0;
-    padding: 0;
-  }
-  
-  main.content {
-    padding: 1rem;
-    padding-top: 5rem; /* for fixed header */
-  }
-  
-  /* ==== Header ==== */
-  .header-bar {
-    background-color: #2c2c2c;
-    color: white;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1.5rem;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-  }
-  
-  .header-bar h1 {
-    margin: 0;
-    font-size: 1.4rem;
-  }
-  
-  .icon {
-    font-size: 1.6rem;
-    margin-right: 0.5rem;
-  }
-  
-  .title-left {
-    display: flex;
-    align-items: center;
-  }
-  
-  .title-right a {
-    font-size: 1.3rem;
-    color: white;
-    text-decoration: none;
-  }
-  
-  /* ==== Section Container ==== */
-  .section {
-    border: 2px solid #2c2c2c;
-    border-radius: 6px;
-    padding: 1rem;
-    margin-bottom: 2rem;
-    background-color: #fff;
-  }
-  
-  .section h2 {
-    margin-top: 0;
-    color: #2c2c2c;
-  }
-  
-  /* ==== Tiles Layout ==== */
-  .tile-row {
-    display: flex;
-    overflow-x: auto;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-  
-  .tile {
-    background: #f9f9f9;
-    padding: 0.75rem;
-    border-radius: 6px;
-    box-shadow: inset 0 0 0 1px #ddd;
-    min-width: 200px;
-    max-width: 240px;
-    flex: 0 0 auto;
-    color: #2c2c2c;
-  
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;      /* ⬅️ Top/left-align contents */
-    justify-content: flex-start;  /* ⬅️ Align vertically to top */
-  }
-  
-  /* ==== Tile Content Formatting ==== */
-  .tile h2 {
-    font-size: 1rem;
-    margin: 0 0 0.5rem 0;
-    color: #2c2c2c;
-  }
+  font-family: sans-serif;
+  background-color: #f5f7fa;
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
 
-  /* Bold label with ellipsis */
-  .tile strong {
-    font-weight: 600;
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-    font-size: 0.95rem;  /* ⬅️ Smaller than h2 */
-  }
-  
-  /* Small text (e.g. codec list) */
-  .tile small {
-    font-size: 0.85rem;
-    color: #555;
-  }
-  
-  /* ==== Jobs/Drive Cards (optional extensions) ==== */
-  .job-card {
-    padding: 0.5rem;
-    margin: 0.5rem 0;
-    background: #eef2f7;
-    border-left: 4px solid #6c8cff;
-    border-radius: 4px;
-  }
-  .job-card.running {
-    border-color: #2196f3;
-  }
-  .job-card.completed {
-    border-color: #4caf50;
-  }
-  
+main.content {
+  padding: 1rem;
+  padding-top: 5rem; /* leave space for header */
+}
 
+/* ==== Header ==== */
+.header-bar {
+  background-color: #2c2c2c;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
 
+.header-bar h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
 
-  .drive-tile {
-    background: #f9f9f9;
-    padding: 0.75rem;
-    border-radius: 6px;
-    box-shadow: inset 0 0 0 1px #ddd;
-    min-width: 200px;
-    max-width: 240px;
-    flex: 0 0 auto;
-    color: #2c2c2c;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
-  
-  .drive-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-top: 1rem;
-  }
-  
-  button.drive-control {
-    margin: 0.2rem 0;
-    padding: 0.4rem 0.6rem;
-    font-size: 0.9rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  button.drive-control.green {
-    background-color: #c8f5c1;
-  }
-  
-  button.drive-control.blue {
-    background-color: #c1d8f5;
-  }
+.title-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
 
+.icon {
+  font-size: 1.6rem;
+}
 
-  button.drive-control.dark {
-    background-color: #dcdcdc;
-    color: #000;
-  }
-  
+/* ==== Title Right (Icons) ==== */
+.title-right {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
 
-  .tile table {
-    border-collapse: collapse;
-    width: 100%;
-  }
-  
-  .tile th,
-  .tile td {
-    padding: 0.3rem;
-    text-align: center;
-  }
-  
+.title-right a, 
+.title-right .theme-symbol {
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
 
+.title-right a:hover, 
+.title-right .theme-symbol:hover {
+  transform: scale(1.15);
+}
 
-  .toast {
-    background: #4caf50;
-    color: white;
-    padding: 0.75rem 1.25rem;
-    border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    font-weight: bold;
-    animation: fadeInOut 4s ease-in-out forwards;
-  }
-  
-  @keyframes fadeInOut {
-    0%   { opacity: 0; transform: translateY(-10px); }
-    10%  { opacity: 1; transform: translateY(0); }
-    90%  { opacity: 1; }
-    100% { opacity: 0; transform: translateY(-10px); }
-  }
-  
+/* ==== Tile Layout ==== */
+.tile-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
 
-  .progress-bar {
-    background: #eee;
-    height: 18px;
-    border-radius: 5px;
-    overflow: hidden;
-    margin-bottom: 10px;
-  }
-  
-  .progress-fill {
-    height: 100%;
-    background: #3b82f6; /* blue */
-    transition: width 0.3s ease;
-  }
-  
-  .progress-bar.total .progress-fill {
-    background: #22c55e; /* green */
-  }
-  
+.tile {
+  background: #fff;
+  padding: 0.75rem;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  min-width: 200px;
+  max-width: 250px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
 
-  .htmx-request .progress-bar {
-    opacity: 0.6;
-  }
-  
-  .switch {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 24px;
-    margin-left: 10px;
-  }
-  
-  .switch input {
-    display: none;
-  }
-  
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: 0.4s;
-    border-radius: 24px;
-  }
-  
-  .slider::before {
-    content: "";
-    position: absolute;
-    height: 20px;
-    width: 20px;
-    left: 2px;
-    bottom: 2px;
-    background-color: white;
-    transition: 0.4s;
-    border-radius: 50%;
-  }
-  
-  input:checked + .slider {
-    background-color: #4caf50;
-  }
-  
-  input:checked + .slider::before {
-    transform: translateX(26px);
-  }
-  
+.tile h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  color: #2c2c2c;
+}
+
+/* ==== Tile Entry Formatting ==== */
+.entry {
+  margin: 2px 0;
+  white-space: normal; /* allow wrapping */
+  word-break: break-word; /* handle long words */
+}
+
+.entry strong {
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+/* ==== Loading Dots Animation ==== */
+@keyframes dots {
+  0% { content: "."; }
+  33% { content: ".."; }
+  66% { content: "..."; }
+  100% { content: "."; }
+}
+
+.dot::after {
+  content: '.';
+  animation: dots 1.5s infinite steps(1);
+}
+
+/* ==== Dark Mode ==== */
+body.dark-mode {
+  background-color: #1e1e1e;
+  color: #f5f5f5;
+}
+
+body.dark-mode .tile {
+  background: #2c2c2c;
+  color: #f5f5f5;
+  text-decoration-color: #f5f5f5;
+  box-shadow: inset 0 0 0 1px #444;
+}
+
+body.dark-mode .tile h3 {
+  color: #f5f5f5;
+}
+
+/* ==== Light Mode ==== */
+body.light-mode {
+  background-color: #f9f9f9;
+  color: #111;
+}
+
+body.light-mode .tile {
+  background: #fff;
+  color: #111;
+  box-shadow: inset 0 0 0 1px #ddd;
+}
