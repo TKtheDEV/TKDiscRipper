@@ -20,8 +20,8 @@
       <strong>ID:</strong> {{ job.job_id }}<br>
       <strong>Type:</strong> {{ job.disc_type }}<br>
       <strong>Label:</strong> {{ job.disc_label }}<br>
-      <strong>Status:</strong> {{ job.status }}<br>
-      <strong>Progress:</strong> {{ job.progress }}%<br>
+      <strong>Status:</strong> <span id="job-status">{{ job.status }}</span><br>
+      <strong>Progress:</strong> <span id="job-progress-val">{{ job.progress }}</span>%
     </div>
 
     <div class="section">
@@ -38,9 +38,13 @@
       <strong>Duration:</strong> {{ job.elapsed_time | duration }}
     </div>
 
-    <div id="job-progress" hx-get="/jobs/{{ job.job_id }}/progress" hx-trigger="every 2s" hx-swap="outerHTML">
-      {% include "partial_job_progress.html" %}
-    </div>    
+    <div class="section">
+      <h2>📊 Progress</h2>
+      <div class="progress-bar total">
+        <div class="progress-fill" id="progress-bar" style="width: {{ job.progress }}%;"></div>
+      </div>
+      <small id="progress-text">{{ job.progress }}%</small>
+    </div>
 
     <div class="section">
       <h2>📋 Live Log</h2>
@@ -48,8 +52,9 @@
         <pre id="log-output" style="white-space: pre-wrap; font-size: 0.9rem;">Connecting...</pre>
       </div>
     </div>
+  </main>
 
-    <script>
+  <script>
     const ws = new WebSocket("wss://" + location.host + "/ws/jobs/{{ job.job_id }}/log");
 
     ws.onmessage = function(event) {
@@ -69,7 +74,18 @@
       console.error("WebSocket error:", err);
       document.getElementById("log-output").textContent += "\n⚠️ Log stream error.";
     };
-    </script>
-  </main>
+
+    async function updateProgress() {
+      const res = await fetch("/jobs/{{ job.job_id }}/json");
+      const job = await res.json();
+
+      document.getElementById("job-status").textContent = job.status;
+      document.getElementById("job-progress-val").textContent = job.progress;
+      document.getElementById("progress-bar").style.width = `${job.progress}%`;
+      document.getElementById("progress-text").textContent = `${job.progress}%`;
+    }
+
+    setInterval(updateProgress, 2000);
+  </script>
 </body>
 </html>

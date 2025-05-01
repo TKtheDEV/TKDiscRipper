@@ -36,16 +36,13 @@ def system_info_partial(request: Request):
     return templates.TemplateResponse("partial_system.html", {"request": request, "system": info})
 '''
 
-@router.get("/partial/jobs")
-def jobs_partial(request: Request):
-    jobs = list(job_tracker.jobs.values())
-    return templates.TemplateResponse("partial_jobs.html", {"request": request, "jobs": jobs})
+@router.get("/api/jobs")
+def api_get_jobs():
+    return JSONResponse(content=list(job_tracker.jobs.values()))
 
-@router.get("/partial/drives")
-def drives_partial(request: Request):
-    drives = drive_manager.get_all_drives()
-    jobs = {j["drive"]: j for j in job_tracker.jobs.values()}
-    return templates.TemplateResponse("partial_drives.html", {"request": request, "drives": drives, "job_map": jobs})
+@router.get("/api/drives")
+def api_get_drives():
+    return JSONResponse(content=drive_manager.get_all_drives())
 
 @router.post("/drives/open")
 def open_drive(disc_type: str = Form(...)):

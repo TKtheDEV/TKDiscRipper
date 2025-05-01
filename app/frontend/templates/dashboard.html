@@ -22,7 +22,6 @@
   <main class="content">
     <h2>System Information</h2>
     <div class="tile-row" id="system-info">
-      <!-- Static Tiles -->
       <div class="tile" id="os_info">
         <h3>OS Info</h3>
         <div class="entry"><strong>OS:</strong> <span id="os">loading...</span></div>
@@ -60,18 +59,15 @@
         <div class="entry"><strong>Usage:</strong> <span id="cpu_usage">loading...</span></div>
         <div class="entry"><strong>Temp:</strong> <span id="cpu_temp">loading...</span></div>
       </div>
-
-      <!-- GPU Tiles will be inserted dynamically -->
     </div>
 
     <hr>
 
     <h2>Drive Status</h2>
-    <div id="drives" hx-get="/drives" hx-trigger="load, every 10s" hx-swap="outerHTML"></div>
+    <div id="drives"></div>
 
     <h2>Job Status</h2>
-    <div id="jobs" hx-get="/jobs" hx-trigger="load, every 10s" hx-swap="outerHTML"></div>
-
+    <div id="jobs"></div>
   </main>
 
   <script>
@@ -88,7 +84,6 @@
         .then(data => {
           if (!data) return;
 
-          // Static info updates
           safeUpdate('os', data.os_info.os);
           safeUpdate('os_version', data.os_info.os_version);
           safeUpdate('kernel', data.os_info.kernel);
@@ -108,7 +103,6 @@
           safeUpdate('cpu_usage', data.cpu_info.usage + "%");
           safeUpdate('cpu_temp', data.cpu_info.temperature + "°C");
 
-          // HW Encoder Info
           const hwencoders = [
             { id: 'amd_vce', vendor: 'vce' },
             { id: 'intel_qsv', vendor: 'qsv' },
@@ -119,17 +113,12 @@
             const vendorInfo = data.hwenc_info?.vendors?.[enc.vendor];
             const el = document.getElementById(enc.id);
             if (vendorInfo?.available) {
-              if (vendorInfo.codecs?.length) {
-                el.innerHTML = "✓<br>(" + vendorInfo.codecs.join(", ") + ")";
-              } else {
-                el.textContent = "✓";
-              }
+              el.innerHTML = "✓<br>(" + vendorInfo.codecs.join(", ") + ")";
             } else {
               el.textContent = "✗";
             }
           });
 
-          // GPU Tiles
           const systemInfoRow = document.getElementById('system-info');
           systemInfoRow.querySelectorAll('.gpu-tile').forEach(tile => tile.remove());
 
@@ -149,6 +138,97 @@
           }
         });
     }
+
+    function updateDrives() {
+      fetch("/api/drives")
+        .then(res => res.json())
+        .then(drives => {
+          const container = document.getElementById("drives");
+          container.innerHTML = '';
+
+          if (drives.length === 0) {
+            container.innerHTML = '<div class="tile"><h3>No drives detected</h3></div>';
+            return;
+          }
+
+          const row = document.createElement("div");
+          row.className = "drive-row";
+
+          drives.forEach(drive => {
+            const tile = document.createElement("div");
+            tile.className = "drive-tile";
+            tile.innerHTML = `
+              <h2>${drive.model}</h2>
+              <code>${drive.path}</code><br>
+              <strong>Type:</strong> ${drive.capability}<br>
+              <strong>Status:</strong> ${drive.status}<br>
+
+              ${drive.status === "idle" ? `
+                <form method="post" action="/drives/open">
+                  <input type="hidden" name="disc_type" value="${drive.capability.toLowerCase()}">
+                  <button type="submit" class="drive-control green">Start Job</button>
+                </form>
+              ` : ""}
+
+              ${drive.status === "busy" && drive.job_id ? `
+                <strong>Job:</strong> <a href="/jobs/${drive.job_id}">${drive.job_id}</a><br>
+              ` : ""}
+
+              ${drive.status === "blacklisted" ? `
+                <span class="badge">🚫 Blacklisted</span><br>
+              ` : ""}
+
+              <form method="post" action="/eject">
+                <input type="hidden" name="drive" value="${drive.path}">
+                <button type="submit" class="drive-control dark">Eject</button>
+              </form>
+            `;
+            row.appendChild(tile);
+          });
+
+          container.appendChild(row);
+        });
+    }
+
+
+    function updateJobs() {
+      fetch("/api/jobs")
+        .then(res => res.json())
+        .then(jobs => {
+          const container = document.getElementById("jobs");
+          container.innerHTML = "";
+
+          if (!jobs.length) {
+            container.innerHTML = `
+              <div class="tile">
+                <h2>No jobs running</h2>
+                <small>Everything's idle.</small>
+              </div>`;
+            return;
+          }
+
+          const row = document.createElement("div");
+          row.className = "tile-row";
+
+          jobs.forEach(job => {
+            const tile = document.createElement("div");
+            tile.className = `tile job-card ${job.status.toLowerCase()}`;
+            tile.innerHTML = `
+              <h2>${job.disc_label}</h2>
+              <strong>Status:</strong> ${job.status}<br>
+              <strong>Type:</strong> ${job.disc_type}<br>
+              <strong>Progress:</strong> ${job.progress}%<br>
+              <strong>Drive:</strong> ${job.drive}<br>
+              <a href="/jobs/${job.job_id}">🔍 View Job</a>
+            `;
+            row.appendChild(tile);
+          });
+
+          container.appendChild(row);
+        });
+    }
+
+
 
     function getCookie(name) {
       const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -183,18 +263,17 @@
       setCookie('theme', mode);
     }
 
-    // On page load
     document.addEventListener('DOMContentLoaded', () => {
       let mode = getCookie('theme');
       if (!mode) {
         mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       }
       applyTheme(mode);
+      updateSystemInfo();
+      updateDrives();
+      updateJobs();
+      setInterval(updateSystemInfo, 5000);
     });
-
-
-    setInterval(updateSystemInfo, 5000);
-    updateSystemInfo();
   </script>
 </body>
 </html>
