@@ -1,6 +1,0 @@
-fastapi
-pyyaml
-jinja2
-cryptography
-uvicorn[standard]
-psutil

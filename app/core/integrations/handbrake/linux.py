@@ -1,78 +1,75 @@
-from pathlib import Path
-from app.core.job_runner import JobRunner
-from app.core.config_manager.config_manager import ConfigManager
+import os
+import re
 import subprocess
+from typing import Callable, Optional
+from app.core.job.context import JobContext
 
-config = ConfigManager()
+class HandBrake:
+    def __init__(self, preset_name: str, preset_file: Optional[str] = None):
+        self.preset_name = preset_name
+        self.preset_file = preset_file
 
-async def encode(job, disc_type, input_dir: Path, output_dir: Path):
-    section = disc_type if disc_type in config.all() else "DVD"
+    def transcode(
+        self,
+        mkv_files: list[str],
+        output_dir: str,
+        ctx: JobContext,
+    ) -> bool:
 
-    preset_name = config.get(f"{section}.handbrakepreset_name", "Very Fast 720p30")
-    preset_path = config.get_path(f"{section}.handbrakepreset_path", None)
-    output_format = config.get(f"{section}.handbrakeformat", "mkv")
-    use_flatpak = config.get("Advanced.HandbrakeFlatpak", True)
+        total_tracks = len(mkv_files)
+        if total_tracks == 0:
+            ctx.log("⚠️ No MKV files found to transcode.")
+            return False
 
-    input_files = list(input_dir.glob("*.mkv"))
-    if not input_files:
-        job.stdout_log.append("No MKV files found to encode.")
-        job.status = "Error: No MKV files found for encoding"
-        return
+        track_weight = 100 / total_tracks
 
-    for idx, input_file in enumerate(input_files, 1):
-        output_file = output_dir / f"{input_file.stem}_encoded.{output_format}"
+        for idx, mkv_file in enumerate(mkv_files, start=1):
+            track_basename = os.path.basename(mkv_file)
+            output_path = os.path.join(output_dir, track_basename)
+            presetfilecmd = ""
+            if self.preset_file:
+                presetfilecmd=("--preset-import-file", self.preset_file,)
 
-        base_cmd = ["HandBrakeCLI"]
-        if use_flatpak:
-            base_cmd = ["flatpak", "run", "--command=HandBrakeCLI", "fr.handbrake.ghb"]
+            ctx.log(f"🎞️ Transcoding file {idx}/{total_tracks}: {track_basename}")
+            ctx.log(f"🚀 {mkv_file} → {output_path}")
 
-        cmd = base_cmd + [
-            "-i", str(input_file),
-            "-o", str(output_file)
-        ]
+            command = [
+                "flatpak", "run", "--command=HandBrakeCLI", "fr.handbrake.ghb",
+                presetfilecmd,
+                "-Z", self.preset_name,
+                "-i", mkv_file,
+                "-o", output_path
+            ]
 
-        if preset_path and preset_path.exists():
-            cmd += ["--preset-import-file", str(preset_path), "--preset", preset_name]
-        else:
-            cmd += ["--preset", preset_name]
+            try:
+                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                assert process.stdout is not None
 
-        job.stdout_log.append(f"Encoding {input_file.name} using section [{section}]...")
-        runner = JobRunner(cmd, job=job)
-        job.runner = runner
-        await runner.start()
+                for line in process.stdout:
+                    line = line.strip()
 
-def get_available_hw_encoders():
-    try:
-        result = subprocess.run(
-            ["flatpak", "run", "--command=HandBrakeCLI", "fr.handbrake.ghb", "-h"],
-            capture_output=True, text=True, check=True
-        )
-        output = result.stdout.splitlines()
+                    if "Encoding:" in line and "%" in line:
+                        match = re.search(r'(\d+\.\d+)\s+%', line)
+                        if match:
+                            file_pct = float(match.group(1))
+                            progress = int(((idx - 1) + file_pct / 100) * track_weight)
+                            ctx.set_progress(progress_step=progress, progress=int(50 + progress * 0.5))
 
-        all_encoders = [line.strip() for line in output if any(v in line for v in ["nvenc_", "qsv_", "vce_"])]
+                            eta_match = re.search(r'ETA\s+([\dhms]+)', line)
+                            eta = eta_match.group(1) if eta_match else ""
+                            ctx.log(f"🎞️ {file_pct:.2f}% {'(ETA ' + eta + ')' if eta else ''}")
+                    elif line:
+                        ctx.log(line)
 
-        def extract_codecs(enc_list, prefix):
-            return sorted({e.replace(prefix, "") for e in enc_list if e.startswith(prefix)})
+                process.wait()
+                if process.returncode != 0:
+                    ctx.log(f"❌ HandBrake failed on {track_basename}")
+                    return False
 
-        encoders = {
-            "nvenc": extract_codecs(all_encoders, "nvenc_"),
-            "qsv": extract_codecs(all_encoders, "qsv_"),
-            "vce": extract_codecs(all_encoders, "vce_")
-        }
+            except Exception as e:
+                ctx.log(f"❌ Error transcoding {mkv_file}: {e}")
+                return False
 
-        return {
-            "vendors": {
-                "nvenc": {"label": "NVIDIA NVENC", "available": bool(encoders["nvenc"]), "codecs": encoders["nvenc"]},
-                "qsv": {"label": "Intel QSV", "available": bool(encoders["qsv"]), "codecs": encoders["qsv"]},
-                "vce": {"label": "AMD VCE", "available": bool(encoders["vce"]), "codecs": encoders["vce"]}
-            }
-        }
-
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        return {
-            "vendors": {
-                "nvenc": {"label": "NVIDIA NVENC", "available": False, "codecs": []},
-                "qsv": {"label": "Intel QSV", "available": False, "codecs": []},
-                "vce": {"label": "AMD VCE", "available": False, "codecs": []}
-            }
-        }
+        ctx.log("✅ Transcoding complete.")
+        ctx.set_progress(progress=100, progress_step=100)
+        return True

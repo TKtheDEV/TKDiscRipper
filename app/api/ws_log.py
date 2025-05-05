@@ -1,29 +1,27 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.core.job_tracker import JobTracker
+from fastapi import WebSocket, WebSocketDisconnect, APIRouter
+from app.core.job.tracker import job_tracker
 import asyncio
 
-router = APIRouter()
-tracker = JobTracker()
+ws_router = APIRouter()
 
-@router.websocket("/jobs/{job_id}/log")
-async def job_log_socket(websocket: WebSocket, job_id: str):
+@ws_router.websocket("/ws/jobs/{job_id}/log")
+async def log_websocket(websocket: WebSocket, job_id: str):
     await websocket.accept()
-
-    job = tracker.get_job(job_id)
-    if not job:
-        await websocket.send_text("Job not found.")
-        await websocket.close()
-        return
-
-    last_index = 0
-
     try:
+        last_sent = 0
         while True:
-            await asyncio.sleep(0.5)
-            log_lines = list(job.stdout_log)
-            if len(log_lines) > last_index:
-                for line in log_lines[last_index:]:
-                    await websocket.send_text(line)
-                last_index = len(log_lines)
+            await asyncio.sleep(1)
+            job = job_tracker.get_job_status(job_id)
+            if not job:
+                await websocket.send_json({"logs": ["❌ Job not found."]})
+                continue
+
+            logs = list(job.get("stdout_log", []))
+            new_logs = logs[last_sent:]
+            last_sent = len(logs)
+
+            if new_logs:
+                await websocket.send_json({"logs": new_logs})
+
     except WebSocketDisconnect:
-        pass
+        print(f"🔌 WebSocket disconnected: job {job_id}")
