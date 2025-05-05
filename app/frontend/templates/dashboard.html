@@ -64,7 +64,15 @@
     <hr>
 
     <h2>Drive Status</h2>
-    <div id="drives"></div>
+    <div class="tile-row" id="drive-control-panel">
+  <div class="tile" id="drive-summary">
+    <h3>Drive Control Panel</h3>
+    <div class="entry"><strong>Available Drives:</strong></div>
+    <div class="entry" id="drive-counts">loading...</div>
+    <div class="entry" id="drive-buttons"></div>
+  </div>
+</div>
+<div class="tile-row" id="drives"></div>
 
     <h2>Job Status</h2>
     <div id="jobs"></div>
@@ -142,53 +150,126 @@
     function updateDrives() {
       fetch("/api/drives")
         .then(res => res.json())
-        .then(drives => {
-          const container = document.getElementById("drives");
-          container.innerHTML = '';
+        .then(data => {
+          if (!Array.isArray(data)) {
+            console.error("Invalid drives response", data);
+            return;
+          }
 
-          if (drives.length === 0) {
+          const container = document.getElementById("drives");
+          const summary = document.getElementById("drive-counts");
+          const buttons = document.getElementById("drive-buttons");
+
+          container.innerHTML = "";
+          summary.innerHTML = "";
+          buttons.innerHTML = "";
+
+          const counts = { CD: 0, DVD: 0, BLURAY: 0 };
+          const free = { CD: [], DVD: [], BLURAY: [] };
+          const blacklisted = [];
+
+          if (data.length === 0) {
             container.innerHTML = '<div class="tile"><h3>No drives detected</h3></div>';
             return;
           }
 
-          const row = document.createElement("div");
-          row.className = "drive-row";
+          data.forEach(drive => {
+          if (drive.status === "blacklisted") {
+            blacklisted.push(drive);
+            return;
+          }
 
-          drives.forEach(drive => {
-            const tile = document.createElement("div");
-            tile.className = "drive-tile";
-            tile.innerHTML = `
-              <h2>${drive.model}</h2>
-              <code>${drive.path}</code><br>
-              <strong>Type:</strong> ${drive.capability}<br>
-              <strong>Status:</strong> ${drive.status}<br>
+      const caps = [];
 
-              ${drive.status === "idle" ? `
-                <form method="post" action="/drives/open">
-                  <input type="hidden" name="disc_type" value="${drive.capability.toLowerCase()}">
-                  <button type="submit" class="drive-control green">Start Job</button>
-                </form>
-              ` : ""}
+      if (drive.capability === "BLURAY") {
+        caps.push("BLURAY", "DVD", "CD");
+      } else if (drive.capability === "DVD") {
+        caps.push("DVD", "CD");
+      } else if (drive.capability === "CD") {
+        caps.push("CD");
+      }
 
-              ${drive.status === "busy" && drive.job_id ? `
-                <strong>Job:</strong> <a href="/jobs/${drive.job_id}">${drive.job_id}</a><br>
-              ` : ""}
+      caps.forEach(cap => {
+        counts[cap]++;
+        if (drive.status === "idle") {
+          free[cap].push(drive);
+        }
+      });
 
-              ${drive.status === "blacklisted" ? `
-                <span class="badge">🚫 Blacklisted</span><br>
-              ` : ""}
+      const tile = document.createElement("div");
+      tile.className = "tile";
 
-              <form method="post" action="/eject">
-                <input type="hidden" name="drive" value="${drive.path}">
-                <button type="submit" class="drive-control dark">Eject</button>
-              </form>
-            `;
-            row.appendChild(tile);
-          });
+      let html = `<h3>${drive.model}</h3>`;
+      html += `<div class="entry"><strong>Path:</strong> ${drive.path}</div>`;
+      html += `<div class="entry"><strong>Type:</strong> ${drive.capability}</div>`;
+      html += `<div class="entry"><strong>Status:</strong> ${drive.status}</div>`;
 
-          container.appendChild(row);
-        });
+      if (drive.disc_label) {
+        html += `<div class="entry"><strong>Label:</strong> ${drive.disc_label}</div>`;
+      }
+
+      if (drive.status === "busy" && drive.job_id) {
+        html += `<div class="entry"><strong>Job:</strong> <a href="/jobs/${drive.job_id}">${drive.job_id}</a></div>`;
+      }
+
+      html += `<button class="drive-control dark" data-path="${drive.path}" data-busy="${drive.status === "busy"}" onclick="handleEjectClick(this)">Eject</button>`;
+
+      tile.innerHTML = html;
+      container.appendChild(tile);
+    });
+
+
+      summary.innerHTML = `CD: ${counts.CD} &nbsp; DVD: ${counts.DVD} &nbsp; BLURAY: ${counts.BLURAY}`;
+
+      Object.entries(free).forEach(([type, list]) => {
+        if (list.length > 0) {
+          const btn = document.createElement("button");
+          btn.textContent = `Rip a ${type}`;
+          btn.className = "drive-control green";
+          btn.onclick = () => ejectDrive(list[0].path, false);
+          buttons.appendChild(btn);
+
+        if (blacklisted.length > 0) {
+          const section = document.createElement("div");
+          section.className = "entry";
+          section.innerHTML = "<strong>Blacklisted Drives:</strong><ul>" +
+            blacklisted.map(d => `<li>${d.model} (${d.path})</li>`).join("") + "</ul>";
+          buttons.appendChild(section);
+        }
+        }
+      });
+    });
+}
+
+
+
+function handleEjectClick(button) {
+  const path = button.getAttribute('data-path');
+  const isBusy = button.getAttribute('data-busy') === 'true';
+
+  if (isBusy) {
+    if (!confirm("This drive is currently in use. Ejecting will cancel the job. Are you sure?")) {
+      return;
     }
+  }
+
+  ejectDrive(path, true);
+}
+
+function ejectDrive(path, silent = false) {
+  fetch('/api/drives/eject', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ drive: path })
+  }).then(res => {
+    if (!res.ok && !silent) {
+      alert("Failed to eject the drive.");
+    } else {
+      updateDrives();
+      updateJobs();
+    }
+  });
+}
 
 
     function updateJobs() {

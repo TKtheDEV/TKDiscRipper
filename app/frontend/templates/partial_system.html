@@ -38,10 +38,10 @@
     {% if system.gpu_info and system.gpu_info|length > 0 %}
       {% for gpu in system.gpu_info %}
         <strong>Model:</strong> {{ gpu.model }}<br>
-        <strong>Usuage:</strong> {{ gpu.usuage }} %<br>
+        <strong>usage:</strong> {{ gpu.usage }} %<br>
         <strong>Temp:</strong> {{ gpu.temperature }} °C<br>
         <strong>Power:</strong> {{ gpu.power_draw }} W<br>
-        <strong>VRAM Usuage:</strong> {{ (gpu.used_memory/1048576) | int }}MB out of {{ (gpu.total_memory/1048576) | int }}MB ({{ gpu.percent_memory }}%)<br>
+        <strong>VRAM usage:</strong> {{ (gpu.used_memory/1048576) | int }}MB out of {{ (gpu.total_memory/1048576) | int }}MB ({{ gpu.percent_memory }}%)<br>
         {% if not loop.last %}
         <hr>
         {% endif %}
