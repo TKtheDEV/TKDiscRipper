@@ -7,8 +7,8 @@ def ensure_cert(cert_file: Path, key_file: Path):
         generate_ssl_cert(cert_file, key_file)
 
 if __name__ == "__main__":
-    cert_file = Path.home() / "TKDR" / "config" / "TKDR.crt"
-    key_file = Path.home() / "TKDR" / "config" / "TKDR.key"
+    cert_file = Path.home() / "TKDiscRipper" / "config" / "server.crt"
+    key_file = Path.home() / "TKDiscRipper" / "config" / "server.key"
 
     ensure_cert(cert_file, key_file)
 

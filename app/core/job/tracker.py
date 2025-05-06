@@ -5,21 +5,21 @@ import uuid
 from collections import deque
 from typing import Dict, Optional
 
-from app.core.drive.manager import drive_manager
+from app.core.drivemanager import drive_manager
 from app.core.rippers.cd import CdRipper
 from app.core.rippers.dvd import DvdRipper
 from app.core.rippers.bluray import BlurayRipper
-from app.core.rippers.otherdisc import OtherDiscRipper
+from app.core.rippers.other import IsoRipper
 from app.core.job.api_helpers import update_job
 
 RIPPER_MAP = {
     "audio_cd": CdRipper,
     "dvd_video": DvdRipper,
     "bluray_video": BlurayRipper,
-    "cd_rom": OtherDiscRipper,
-    "dvd_rom": OtherDiscRipper,
-    "bluray_rom": OtherDiscRipper,
-    "otherdisc": OtherDiscRipper,
+    "cd_rom": IsoRipper,
+    "dvd_rom": IsoRipper,
+    "bluray_rom": IsoRipper,
+    "otherdisc": IsoRipper,
 }
 
 class JobTracker:

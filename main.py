@@ -11,7 +11,7 @@ import logging
 from app.api.api import router as api_router
 from app.api.ws_log import ws_router
 from app.core.config import get_config
-from app.core.os.disc_detection import monitor_cdrom
+from app.core.disc_detection import monitor_cdrom
 from app.core.job.tracker import job_tracker
 from app.core.templates import templates
 

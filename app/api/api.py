@@ -1,11 +1,12 @@
 import logging
+import subprocess
 from fastapi import APIRouter, Request, Depends, Form, Body
 from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from app.core.job.tracker import job_tracker
 from app.core.config import get_config, set_config, get_description, get_descriptions
-from app.core.drive.manager import drive_manager
+from app.core.drivemanager import drive_manager
 from app.core.templates import templates
-from app.core.os.systeminfo import SystemInfo
+from app.core.systeminfo import SystemInfo
 
 router = APIRouter()
 
@@ -28,14 +29,6 @@ def get_system_info():
     info = SystemInfo().get_system_info()
     return info
 
-'''
-@router.get("/partial/system")
-def system_info_partial(request: Request):
-    from app.core.os.linux_systeminfo import LinuxSystemInfo
-    info = LinuxSystemInfo().get_system_info()
-    return templates.TemplateResponse("partial_system.html", {"request": request, "system": info})
-'''
-
 @router.get("/api/jobs")
 def api_get_jobs():
     return JSONResponse(content=list(job_tracker.jobs.values()))
@@ -44,18 +37,24 @@ def api_get_jobs():
 def api_get_drives():
     return JSONResponse(content=drive_manager.get_all_drives())
 
-@router.post("/drives/open")
-def open_drive(disc_type: str = Form(...)):
-    drive = drive_manager.find_available_drive(disc_type)
+@router.post("/api/drives/eject")
+def eject_drive(request: Request, payload: dict = Body(...)):
+    drive = payload.get("drive")
     if not drive:
-        return {"error": "No available drive"}
-    job_id = job_tracker.start_job(drive, disc_type)
-    return {"job": job_id, "drive": drive}
+        return JSONResponse(content={"error": "Missing drive path"}, status_code=400)
 
-@router.post("/eject")
-def eject_drive(drive: str = Form(...)):
-    # could be extended later
-    return {"detail": f"Eject not yet implemented for {drive}"}
+    try:
+        # Attempt to eject the drive
+        subprocess.run(["eject", drive], check=True)
+
+        # Free the drive if it had a job assigned
+        job_id = drive_manager.get_job_for_drive(drive)
+        if job_id:
+            drive_manager.free_drive_by_job(job_id)
+
+        return JSONResponse(content={"detail": f"✅ Ejected {drive}"})
+    except subprocess.CalledProcessError as e:
+        return JSONResponse(content={"error": f"Failed to eject {drive}: {e}"}, status_code=500)
 
 @router.get("/settings")
 def get_settings(request: Request):

@@ -21,8 +21,8 @@ class IsoRipper:
         self.base_output = os.path.expanduser(config.get("OTHER", "outputdirectory"))
         self.compression = config.get("OTHER", "compression", fallback="bz2").lower()
 
-        self.temp_dir = os.path.join(self.base_temp, job_id)      
-        self.output_dir = self.base_output                         
+        self.temp_dir = os.path.join(self.base_temp, job_id) 
+        self.output_dir = self.base_output                   
 
         os.makedirs(self.temp_dir, exist_ok=True)
         os.makedirs(self.output_dir, exist_ok=True)
